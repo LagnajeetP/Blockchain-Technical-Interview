@@ -211,7 +211,26 @@ export async function createDemoCatalog(
 }
 
 export async function ensureDemoCatalog(): Promise<ListingRecord[]> {
-  const current = await listListings();
+  const stored = await listListings();
+  const current = await Promise.all(
+    stored.map(async (listing) => {
+      const template = templates.find((item) => item.id === listing.id);
+      if (
+        !template ||
+        (listing.title === template.title &&
+          listing.summary === template.summary)
+      ) {
+        return listing;
+      }
+      const refreshed = {
+        ...listing,
+        title: template.title,
+        summary: template.summary,
+      };
+      await upsertListing(refreshed);
+      return refreshed;
+    }),
+  );
   const expectedSeed = env.EVALUATION_SEED || DEMO_SEED;
   const expectedTerms = termsHashForReport(
     createEvaluation(expectedSeed, 'contextual-rules'),
