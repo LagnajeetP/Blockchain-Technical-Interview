@@ -1,0 +1,7 @@
+# Local hosted demo: explicit simulation with a private evaluation seed.
+DEMO_CHAIN_MODE=simulation
+PUBLIC_LIVE_RUNS_ENABLED=false
+EVALUATION_SEED=replace-with-a-long-random-local-seed
+
+# Required only for the protected live listing-seed endpoint.
+OPERATOR_TOKEN=replace-with-a-long-random-local-token

@@ -1,0 +1,1 @@
+ALTER TABLE `agent_runs` ADD `lock_owner` text;
