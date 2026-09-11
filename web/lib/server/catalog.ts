@@ -21,6 +21,15 @@ export const PRIOR_LISTING_ID = 'ev-fast-32';
 export const SUCCESS_LISTING_ID = 'ev-context-32';
 export const FAULT_LISTING_ID = 'ev-fault-32';
 
+export const COMMODITY_TERMS = {
+  access: 'Non-exclusive internal evaluation use',
+  redistribution: 'Not granted',
+  delivery: 'Private report after evaluator approval',
+  buyerProtection:
+    'Refund on byte, commitment, schema, or recomputation failure',
+  verification: 'Commitment match and deterministic recomputation',
+} as const;
+
 export interface PublicSellerPlan {
   agentId: string;
   action: SellerPlan['action'];
@@ -76,9 +85,9 @@ const templates: ListingTemplate[] = [
   {
     id: FAULT_LISTING_ID,
     candidateId: 'contextual-rules',
-    title: 'Protocol drill · malformed artifact',
+    title: 'Context-aware routing · challenge listing',
     summary:
-      'An explicit fault-injection listing for demonstrating evaluator rejection and refund.',
+      'A 32-case dossier offered under the same public terms for the buyer-protection demonstration.',
     priceWei: BigInt('1000000000000'),
     ageMs: 5 * 60_000,
     fixtureKind: 'invalid',
@@ -105,8 +114,7 @@ export function termsHashForReport(
         candidateConfig: report.candidateConfig,
         sampleCount: claimedSampleCount,
         testSetCommitment: keccak256(stringToHex(report.evaluationSeed)),
-        refund:
-          'artifact bytes, commitment, schema, and deterministic recomputation only',
+        ...COMMODITY_TERMS,
       }),
     ),
   );

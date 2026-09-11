@@ -13,16 +13,18 @@ The hosted demo is deliberately labeled **simulation** until funded Base Sepolia
 - The **evaluator** is a disclosed, pinned referee. It attests delivery or rejects malformed evidence and adjudicates objective disputes.
 - `EvalVaultEscrow` holds native ETH until a release or refund becomes final.
 
-The interface runs this entire buyer loop from one goal. The fault-injection path demonstrates a real protocol rejection: it refunds the buyer without revealing private cases.
+The interface runs this entire buyer loop as a paced, replayable simulation from one goal. The success path makes all seven stages visible and ends with a before/after decision-value receipt. The fault-injection path demonstrates a real protocol rejection: it refunds the buyer without revealing private cases.
 
 ## Public claims and paid evidence
 
 | Public before purchase | Private until the entitled delivery state |
 |---|---|
 | Candidate and task scope | Evaluation seed and complete test inputs |
-| Suite version and sample count | Expected and actual outputs |
+| Suite version, sample count, and non-exclusive usage terms | Expected and actual outputs |
 | Price, freshness, expiry, and provenance tier | Per-case correctness and failure examples |
 | Artifact and terms commitments | Accuracy and measured latency distribution |
+
+The prototype treats evidence as a defined information commodity: access is non-exclusive and limited to internal evaluation, redistribution is not granted, delivery follows evaluator approval, and objective byte, commitment, schema, or recomputation failure triggers a refund. These terms are included in the committed purchase terms rather than presented as decorative marketplace metadata.
 
 The catalog API removes the object key, fixture type, seed, cases, scores, and timings. A random capability is returned once when a run starts; D1 stores only its SHA-256 digest. The authorized response reads the report from R2 only after the workflow records `Evidence unlocked`, and persisted run JSON never contains the report.
 

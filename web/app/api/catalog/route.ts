@@ -1,4 +1,5 @@
 import {
+  COMMODITY_TERMS,
   ensureDemoCatalog,
   FAULT_LISTING_ID,
   PRIOR_LISTING_ID,
@@ -18,6 +19,7 @@ export async function GET() {
         ownedListingIds: [PRIOR_LISTING_ID],
         protocolDrillListingId: FAULT_LISTING_ID,
         sellerAgent: publicSellerPlan(listings),
+        marketTerms: COMMODITY_TERMS,
         chain: publicChainInfo(),
         disclosure:
           'Scores and case payloads stay in private object storage. Public fields are scope, age, price, provenance, terms, and commitment.',

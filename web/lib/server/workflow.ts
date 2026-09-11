@@ -299,7 +299,7 @@ export async function createRun(value: unknown) {
     run,
     'created',
     'Evidence gap detected',
-    `${run.result?.beforeDecision} Public metadata selected ${chosen.id}; scores remained sealed.`,
+    `${run.result?.beforeDecision}. Public metadata selected ${chosen.id}; scores remained sealed.`,
   );
   await insertRun(run, await sha256(token));
   return { run: publicRun(run, chosen), token, chain: publicChainInfo() };

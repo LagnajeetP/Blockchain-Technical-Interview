@@ -1,16 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   Check,
   CircleAlert,
-  DatabaseZap,
   ExternalLink,
-  Gauge,
   LockKeyhole,
-  Radar,
-  ReceiptText,
   RefreshCw,
   ShieldCheck,
   Undo2,
@@ -48,6 +44,13 @@ type CatalogPayload = {
     reason: string;
     nextReviewAt: number;
     policy: string;
+  };
+  marketTerms: {
+    access: string;
+    redistribution: string;
+    delivery: string;
+    buyerProtection: string;
+    verification: string;
   };
   chain: ChainInfo;
   disclosure: string;
@@ -95,9 +98,23 @@ const stageNumber: Record<string, number> = {
 const sleep = (milliseconds: number) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+const BASELINE_ACCURACY = 0.75;
+
+const checkLabels: Record<string, string> = {
+  integrity: 'Exact bytes',
+  provenance: 'Provenance',
+  terms: 'Purchase terms',
+  recomputed: 'Recomputed result',
+};
+
 function elapsedLabel(milliseconds: number) {
   if (milliseconds < 1_000) return `${Math.round(milliseconds)} ms`;
   return `${(milliseconds / 1_000).toFixed(2)} s`;
+}
+
+function latencyLabel(milliseconds: number) {
+  if (milliseconds < 0.001) return '<0.001 ms';
+  return `${milliseconds.toFixed(3)} ms`;
 }
 
 function ageLabel(timestamp: number, referenceTime: number) {
@@ -135,6 +152,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referenceTime] = useState(() => Date.now());
+  const resultRef = useRef<HTMLElement | null>(null);
 
   const refreshCatalog = useCallback(async () => {
     const response = await fetch('/api/catalog', { cache: 'no-store' });
@@ -186,6 +204,7 @@ export default function Home() {
   const progressRun = useCallback(
     async (initial: RunPayload, token: string) => {
       let payload = initial;
+      if (payload.chain.mode === 'simulation') await sleep(450);
       for (let attempts = 0; attempts < 24; attempts += 1) {
         if (['complete', 'failed'].includes(payload.run.stage)) break;
         const response = await fetch(`/api/runs/${payload.run.id}/advance`, {
@@ -207,6 +226,12 @@ export default function Home() {
           throw new Error(next.error || 'Buyer run could not advance');
         payload = next;
         setRun(payload.run);
+        if (
+          payload.chain.mode === 'simulation' &&
+          !['complete', 'failed'].includes(payload.run.stage)
+        ) {
+          await sleep(520);
+        }
       }
       if (!['complete', 'failed'].includes(payload.run.stage)) {
         throw new Error(
@@ -337,38 +362,72 @@ export default function Home() {
     return () => lifecycle.abort();
   }, [executeRun]);
 
+  useEffect(() => {
+    if (!run || !['complete', 'failed'].includes(run.stage)) return;
+    resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [run]);
+
   const totalElapsed = run?.trace.at(-1)?.elapsedMs ?? 0;
-  const currentStep = stageNumber[run?.stage ?? 'selected'] ?? 0;
+  const currentStep = run ? (stageNumber[run.stage] ?? 0) : 0;
   const validation = run?.result?.validation;
   const report = run?.result?.report;
   const chain = catalog?.chain;
   const terminal = run?.stage === 'complete' || run?.stage === 'failed';
+  const isSimulation = chain?.mode !== 'live';
+  const accuracyLift = report
+    ? report.metrics.accuracy - BASELINE_ACCURACY
+    : null;
+  const statusLine = (() => {
+    if (!run) return 'Ready · choose a path and run the buyer';
+    if (!terminal) return `Running · ${run.trace.at(-1)?.label ?? 'starting'}`;
+    if (run.status === 'refunded')
+      return 'Complete · evidence rejected · funds returned';
+    if (run.status === 'failed') return 'Stopped · run needs attention';
+    return `Complete · 1 dossier purchased · ${report?.sampleCount ?? 0}/${report?.sampleCount ?? 0} cases verified`;
+  })();
 
   const listingStates = (() => {
     if (!catalog) return new Map<string, string>();
     return new Map(
       catalog.listings.map((listing) => {
-        let decision = 'Eligible from public metadata';
+        let decision = 'Eligible';
         if (catalog.ownedListingIds.includes(listing.id))
-          decision = 'Reject · already owned';
+          decision = 'Not selected · already owned';
         else if (referenceTime - listing.observedAt > 24 * 60 * 60_000)
-          decision = 'Reject · stale';
+          decision = 'Not selected · stale';
         else if (listing.sampleCount < 24)
-          decision = 'Reject · insufficient scope';
+          decision = 'Not selected · insufficient coverage';
         else if (run?.selectedListingId === listing.id)
           decision = 'Selected by buyer';
         else if (listing.id === catalog.protocolDrillListingId)
-          decision = 'Refund drill only';
+          decision = 'Buyer-protection scenario';
         return [listing.id, decision];
       }),
     );
   })();
+  const displayedListings = catalog
+    ? [...catalog.listings].sort((left, right) => {
+        const priority = (listing: PublicListingRecord) => {
+          if (run?.selectedListingId === listing.id) return 0;
+          if (
+            scenario === 'refund' &&
+            listing.id === catalog.protocolDrillListingId
+          )
+            return 0;
+          if (listing.id === catalog.protocolDrillListingId) return 4;
+          if (catalog.ownedListingIds.includes(listing.id)) return 3;
+          if (referenceTime - listing.observedAt > 24 * 60 * 60_000) return 2;
+          return 1;
+        };
+        return priority(left) - priority(right);
+      })
+    : null;
 
   return (
     <main className="shell">
       <header className="topbar">
         <a className="brand" href="#top" aria-label="EvalVault home">
-          <span className="brand-mark">EV</span>
+          <span className="brand-mark">E</span>
           <span>EvalVault</span>
         </a>
         <div className="network">
@@ -376,22 +435,20 @@ export default function Home() {
             className={`network-dot ${chain?.mode === 'live' ? 'live' : ''}`}
           />
           {chain?.chainName ?? 'Base Sepolia'}
-          <span className="muted"> · {chain?.mode ?? 'loading'}</span>
+          <span className="muted"> / {chain?.mode ?? 'loading'}</span>
         </div>
         <Badge variant="outline" className="operator-badge">
-          <ShieldCheck /> constrained signer
+          {isSimulation ? 'No wallet required' : 'Constrained signer'}
         </Badge>
       </header>
 
       <div id="top" className="workbench">
         <aside className="policy-panel">
-          <div className="eyebrow">
-            <Radar /> Buyer mandate
-          </div>
+          <div className="eyebrow">Buyer simulation</div>
           <h1>Buy evidence before choosing a model.</h1>
           <p className="lede">
-            An autonomous buyer detects an evidence gap, buys one sealed
-            evaluation, verifies it, then routes or abstains.
+            Choose a goal, fund sealed evidence, verify the result, and make a
+            routing decision.
           </p>
 
           <fieldset className="control-field" disabled={busy}>
@@ -422,51 +479,29 @@ export default function Home() {
           </fieldset>
 
           <fieldset className="control-field scenario-field" disabled={busy}>
-            <legend>Demonstration path</legend>
+            <legend>Outcome to demonstrate</legend>
             <div className="scenario-toggle">
               <button
                 type="button"
                 aria-pressed={scenario === 'success'}
                 onClick={() => setScenario('success')}
               >
-                <Check /> Verified purchase
+                Successful delivery
               </button>
               <button
                 type="button"
                 aria-pressed={scenario === 'refund'}
                 onClick={() => setScenario('refund')}
               >
-                <Undo2 /> Rejection + refund
+                Invalid evidence → refund
               </button>
             </div>
+            <p className="scenario-preview">
+              {scenario === 'success'
+                ? 'The buyer purchases a valid dossier, recomputes it, and changes its route.'
+                : 'The evaluator rejects invalid evidence; the buyer is refunded before reveal.'}
+            </p>
           </fieldset>
-
-          <dl className="mandate-grid">
-            <div>
-              <dt>Accuracy floor</dt>
-              <dd>{goalCopy[goal].floor}</dd>
-            </div>
-            <div>
-              <dt>Ranking</dt>
-              <dd>{goalCopy[goal].order}</dd>
-            </div>
-            <div>
-              <dt>Max age</dt>
-              <dd>24 hours</dd>
-            </div>
-            <div>
-              <dt>Spend cap</dt>
-              <dd>0.000002 ETH</dd>
-            </div>
-            <div>
-              <dt>Owned evidence</dt>
-              <dd>fast-keyword</dd>
-            </div>
-            <div>
-              <dt>Signing</dt>
-              <dd>allowlisted methods</dd>
-            </div>
-          </dl>
 
           {run && !terminal ? (
             <Button
@@ -477,11 +512,12 @@ export default function Home() {
             >
               {busy ? (
                 <>
-                  <RefreshCw className="spin" /> Reconciling
+                  <RefreshCw className="spin" />
+                  {isSimulation ? 'Simulating' : 'Reconciling'}
                 </>
               ) : (
                 <>
-                  Resume buyer <ArrowRight />
+                  Resume run <ArrowRight />
                 </>
               )}
             </Button>
@@ -496,19 +532,59 @@ export default function Home() {
             >
               {busy ? (
                 <>
-                  <RefreshCw className="spin" /> Buyer running
+                  <RefreshCw className="spin" /> Simulating
                 </>
               ) : (
                 <>
-                  Run buyer agent <ArrowRight />
+                  {terminal ? 'Replay simulation' : 'Run simulation'}{' '}
+                  <ArrowRight />
                 </>
               )}
             </Button>
           )}
-          <p className="guardrail">
-            <ShieldCheck /> Chain, contract, method, exact value, freshness, and
-            spend limits are enforced server-side.
+
+          <div className="mode-note">
+            <strong>
+              {isSimulation ? 'Simulation mode' : 'Live testnet mode'}
+            </strong>
+            <span>
+              {isSimulation
+                ? 'No wallet or funds needed. Uses the real buyer policy and escrow state machine.'
+                : 'Transactions settle through the configured Base Sepolia contract.'}
+            </span>
+          </div>
+
+          <dl className="mandate-grid">
+            <div>
+              <dt>Accuracy floor</dt>
+              <dd>{goalCopy[goal].floor}</dd>
+            </div>
+            <div>
+              <dt>Priority</dt>
+              <dd>{goalCopy[goal].order}</dd>
+            </div>
+            <div>
+              <dt>Max age</dt>
+              <dd>24 hours</dd>
+            </div>
+            <div>
+              <dt>Spend cap</dt>
+              <dd>0.000002 ETH</dd>
+            </div>
+          </dl>
+
+          <p className="baseline-note">
+            Owned baseline <strong>fast-keyword · 75.0%</strong>
           </p>
+          <details className="guardrail">
+            <summary>
+              <ShieldCheck /> Technical guardrails
+            </summary>
+            <p>
+              The server enforces chain, contract, method, exact value,
+              freshness, and spend limits.
+            </p>
+          </details>
           {error && (
             <div className="error-callout" role="alert">
               <CircleAlert /> {error}
@@ -516,62 +592,108 @@ export default function Home() {
           )}
         </aside>
 
-        <section className="market-panel" aria-label="Evidence marketplace">
+        <section className="market-panel" aria-label="Evidence catalogue">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">
-                <DatabaseZap /> Evidence market
-              </span>
-              <h2>Private evaluation dossiers</h2>
+              <span className="eyebrow">Evidence catalogue</span>
+              <h2>Comparable sealed dossiers</h2>
             </div>
             <span className="count">
               {catalog?.listings.length ?? '—'} listings
             </span>
           </div>
           <p className="market-note">
-            The buyer ranks only public claims. Accuracy, timings, test inputs,
-            and outputs stay sealed until the paid delivery state.
+            Scope, freshness, provenance, price, and commitments are public.
+            Scores and case data remain private until approved delivery.
           </p>
+
+          <div className="commodity-terms" aria-label="Evidence purchase terms">
+            <div>
+              <span>Access</span>
+              <strong>{catalog?.marketTerms.access ?? 'Loading terms'}</strong>
+            </div>
+            <div>
+              <span>Settlement</span>
+              <strong>Native ETH escrow</strong>
+            </div>
+            <div>
+              <span>Delivery</span>
+              <strong>
+                {catalog?.marketTerms.delivery ?? 'Loading terms'}
+              </strong>
+            </div>
+            <div>
+              <span>Buyer protection</span>
+              <strong>
+                {catalog?.marketTerms.buyerProtection ?? 'Loading terms'}
+              </strong>
+            </div>
+          </div>
+
           {catalog?.sellerAgent && (
-            <p className="seller-note">
-              <span>Seller agent · {catalog.sellerAgent.action}</span>
-              {catalog.sellerAgent.reason}. {catalog.sellerAgent.policy}.
-            </p>
+            <details className="seller-note">
+              <summary>
+                Seller publication policy · {catalog.sellerAgent.action}
+              </summary>
+              <p>
+                {catalog.sellerAgent.reason}. {catalog.sellerAgent.policy}.
+              </p>
+            </details>
           )}
           <div className="listings">
-            {catalog?.listings.map((listing) => {
+            {displayedListings?.map((listing) => {
               const selected = run?.selectedListingId === listing.id;
-              const rejected = listingStates
+              const unavailable = listingStates
                 .get(listing.id)
-                ?.startsWith('Reject');
+                ?.startsWith('Not selected');
               return (
                 <Card
                   key={listing.id}
-                  className={`listing ${selected ? 'recommended' : ''} ${rejected ? 'rejected' : ''}`}
+                  className={`listing ${selected ? 'recommended' : ''} ${unavailable ? 'rejected' : ''}`}
                 >
                   <CardHeader>
                     <div className="listing-id">
-                      {listing.id} · {listing.provenance}
+                      {listing.suiteVersion} · {listing.provenance}
                       {selected && <Badge>selected</Badge>}
                     </div>
                     <CardTitle>{listing.title}</CardTitle>
                     <p>{listing.summary}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="facts">
-                      <span>{listing.sampleCount} hidden cases</span>
-                      <span>{ageLabel(listing.observedAt, referenceTime)}</span>
-                      <span>{formatEther(BigInt(listing.priceWei))} ETH</span>
-                    </div>
-                    <div className="commitment">
-                      <LockKeyhole /> artifact {shortHash(listing.commitment)} ·
-                      terms {shortHash(listing.termsHash)}
-                    </div>
+                    <dl className="facts">
+                      <div>
+                        <dt>Evidence</dt>
+                        <dd>Routing accuracy</dd>
+                      </div>
+                      <div>
+                        <dt>Coverage</dt>
+                        <dd>{listing.sampleCount} tickets</dd>
+                      </div>
+                      <div>
+                        <dt>Freshness</dt>
+                        <dd>{ageLabel(listing.observedAt, referenceTime)}</dd>
+                      </div>
+                      <div>
+                        <dt>Price</dt>
+                        <dd>{formatEther(BigInt(listing.priceWei))} ETH</dd>
+                      </div>
+                    </dl>
+                    <details className="commitment">
+                      <summary>
+                        <LockKeyhole /> Commitments recorded
+                      </summary>
+                      <code>
+                        Artifact {shortHash(listing.commitment)} · terms{' '}
+                        {shortHash(listing.termsHash)}
+                      </code>
+                    </details>
                     <div className="listing-foot">
-                      <span className={`decision ${rejected ? 'stale' : ''}`}>
+                      <span
+                        className={`decision ${unavailable ? 'stale' : ''}`}
+                      >
                         {listingStates.get(listing.id)}
                       </span>
-                      <span className="sealed">scores sealed</span>
+                      <span className="sealed">Private until delivery</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -580,30 +702,36 @@ export default function Home() {
           </div>
         </section>
 
-        <aside className="trace-panel" aria-live="polite">
+        <aside className="trace-panel">
           <div className="trace-head">
-            <span className="eyebrow">
-              <Gauge /> Execution trace
-            </span>
+            <span className="eyebrow">Run trace</span>
             {run && <span>{elapsedLabel(totalElapsed)}</span>}
           </div>
           <h2>{run ? run.trace.at(-1)?.label : 'Ready to run'}</h2>
-          <div
+          <output className="run-status">{statusLine}</output>
+          <progress
             className="progress-rail"
-            aria-label={`Execution step ${currentStep} of 7`}
-          >
-            <span style={{ width: `${(currentStep / 7) * 100}%` }} />
-          </div>
+            aria-label="Buyer simulation progress"
+            max={7}
+            value={currentStep}
+          />
           <div className="trace-list">
             {run ? (
               run.trace.map((entry, index) => (
                 <div
-                  className={`trace-line ${index === run.trace.length - 1 ? 'active' : ''}`}
+                  className={`trace-line ${index === run.trace.length - 1 && !terminal ? 'active' : 'complete'}`}
                   key={`${entry.at}-${index}`}
                 >
                   <span>{String(index + 1).padStart(2, '0')}</span>
                   <div>
-                    <strong>{entry.label}</strong>
+                    <div className="trace-label">
+                      <strong>{entry.label}</strong>
+                      <b>
+                        {index === run.trace.length - 1 && !terminal
+                          ? 'Current'
+                          : 'Done'}
+                      </b>
+                    </div>
                     <small>{entry.detail}</small>
                     <em>{elapsedLabel(entry.elapsedMs)}</em>
                     {entry.txHash && chain?.transactionExplorerUrl ? (
@@ -625,7 +753,10 @@ export default function Home() {
                 <div className="trace-line active">
                   <span>01</span>
                   <div>
-                    <strong>Detect evidence gap</strong>
+                    <div className="trace-label">
+                      <strong>Detect evidence gap</strong>
+                      <b>Ready</b>
+                    </div>
                     <small>
                       Owned baseline is below the selected quality floor.
                     </small>
@@ -634,28 +765,44 @@ export default function Home() {
                 <div className="trace-line">
                   <span>02</span>
                   <div>
-                    <strong>Rank public claims</strong>
+                    <div className="trace-label">
+                      <strong>Rank public claims</strong>
+                      <b>Queued</b>
+                    </div>
                     <small>Scope · freshness · price · provenance.</small>
                   </div>
                 </div>
                 <div className="trace-line">
                   <span>03</span>
                   <div>
-                    <strong>Fund, unlock, verify</strong>
+                    <div className="trace-label">
+                      <strong>Fund escrow</strong>
+                      <b>Queued</b>
+                    </div>
                     <small>
-                      Every economic step is resumable and receipt-bound.
+                      Reserve the exact listing price under purchase terms.
                     </small>
+                  </div>
+                </div>
+                <div className="trace-line">
+                  <span>04</span>
+                  <div>
+                    <div className="trace-label">
+                      <strong>Verify and decide</strong>
+                      <b>Queued</b>
+                    </div>
+                    <small>Recompute the report, then settle or refund.</small>
                   </div>
                 </div>
               </>
             )}
           </div>
           <div className="truth-boundary">
-            <span>Trust boundary</span>
+            <span>What the receipt proves</span>
             <p>
-              A matching hash proves the delivered bytes. The disclosed
-              evaluator remains trusted for how the private test set was
-              produced.
+              Commitments prove the delivered bytes and recomputation proves
+              internal consistency. The evaluator is still trusted to construct
+              the private test set fairly.
             </p>
           </div>
         </aside>
@@ -663,18 +810,19 @@ export default function Home() {
 
       {run && (
         <section
+          ref={resultRef}
           className="evidence-console"
           aria-label="Purchased evidence result"
         >
           <div className="result-header">
             <div>
-              <span className="eyebrow">
-                <ReceiptText /> Decision receipt
-              </span>
+              <span className="eyebrow">Decision receipt</span>
               <h2>
-                {run.scenario === 'refund'
-                  ? 'Bad evidence rejected without reveal'
-                  : 'Purchased evidence changed the route'}
+                {!terminal
+                  ? 'Buyer simulation in progress'
+                  : run.scenario === 'refund'
+                    ? 'Evidence failed verification; funds returned'
+                    : `The buyer switched to ${run.selectedCandidateId ?? 'the verified model'}`}
               </h2>
             </div>
             <div className="receipt-meta">
@@ -705,12 +853,45 @@ export default function Home() {
             </div>
           </div>
 
+          {terminal && (
+            <div className="value-summary">
+              <div>
+                <span>Evidence gap</span>
+                <p>
+                  Owned evidence measured 75.0%, below the{' '}
+                  {goalCopy[run.goal].floor}{' '}
+                  {goalCopy[run.goal].label.toLowerCase()} floor.
+                </p>
+              </div>
+              <div>
+                <span>Known before payment</span>
+                <p>Coverage, freshness, provenance, price, and commitments.</p>
+              </div>
+              <div>
+                <span>Private commodity</span>
+                <p>
+                  {report
+                    ? `${report.sampleCount} inputs, outputs, labels, and timings unlocked after approval.`
+                    : 'The report remained sealed because private validation failed.'}
+                </p>
+              </div>
+              <div>
+                <span>Buyer value</span>
+                <p>
+                  {report
+                    ? `The new evidence changed the route to ${run.selectedCandidateId}.`
+                    : 'Buyer protection returned the payment without revealing the cases.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {validation && (
             <div className="check-grid">
               {Object.entries(validation.checks).map(([label, passed]) => (
                 <div className={passed ? 'pass' : 'fail'} key={label}>
                   {passed ? <Check /> : <CircleAlert />}
-                  <span>{label}</span>
+                  <span>{checkLabels[label] ?? label}</span>
                   <strong>{passed ? 'pass' : 'fail'}</strong>
                 </div>
               ))}
@@ -719,6 +900,32 @@ export default function Home() {
 
           {report ? (
             <div className="report-grid">
+              <div className="comparison-card">
+                <div className="comparison-head">
+                  <div>
+                    <span>Decision comparison</span>
+                    <strong>
+                      +{((accuracyLift ?? 0) * 100).toFixed(1)} percentage
+                      points
+                    </strong>
+                  </div>
+                  <small>Same {report.sampleCount}-case routing suite</small>
+                </div>
+                <div className="comparison-row">
+                  <span>Owned baseline</span>
+                  <div>
+                    <i style={{ width: `${BASELINE_ACCURACY * 100}%` }} />
+                  </div>
+                  <strong>{(BASELINE_ACCURACY * 100).toFixed(1)}%</strong>
+                </div>
+                <div className="comparison-row purchased">
+                  <span>Purchased evidence</span>
+                  <div>
+                    <i style={{ width: `${report.metrics.accuracy * 100}%` }} />
+                  </div>
+                  <strong>{(report.metrics.accuracy * 100).toFixed(1)}%</strong>
+                </div>
+              </div>
               <div className="metric-card">
                 <span>Verified accuracy</span>
                 <strong>{(report.metrics.accuracy * 100).toFixed(1)}%</strong>
@@ -729,7 +936,7 @@ export default function Home() {
               </div>
               <div className="metric-card">
                 <span>Measured p50</span>
-                <strong>{report.metrics.p50Ms.toFixed(3)} ms</strong>
+                <strong>{latencyLabel(report.metrics.p50Ms)}</strong>
                 <small>
                   Local synchronous CPU timing; exploratory, not hosted-model
                   latency
@@ -737,7 +944,7 @@ export default function Home() {
               </div>
               <div className="metric-card">
                 <span>Measured p95</span>
-                <strong>{report.metrics.p95Ms.toFixed(3)} ms</strong>
+                <strong>{latencyLabel(report.metrics.p95Ms)}</strong>
                 <small>
                   Recomputed from the delivered per-case observations
                 </small>
@@ -778,8 +985,8 @@ export default function Home() {
 
       <footer>
         <div>
-          <LockKeyhole /> Reports remain private in R2; only commitments and
-          settlement state belong on-chain.
+          <LockKeyhole /> Private reports stay off-chain. Commitments and
+          settlement state are public.
         </div>
         <nav>
           {chain?.explorerUrl && (

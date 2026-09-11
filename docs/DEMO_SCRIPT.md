@@ -18,7 +18,7 @@ Point to the mode badge. If it says `simulation`, say that this hosted run exerc
 
 ## 0:35–1:05 — Show autonomous selection
 
-Choose **Quality**. Point out:
+Choose **Quality**. Briefly point to the access, settlement, delivery, and buyer-protection terms, then point out:
 
 - the owned keyword-router evidence, rejected as already purchased;
 - the stale contextual report, rejected on public metadata;
@@ -29,7 +29,7 @@ Choose **Quality**. Point out:
 
 ## 1:05–2:15 — Run the successful purchase
 
-Select **Verified purchase** and click **Run buyer agent**. Follow the trace without clicking individual cards.
+Select **Successful delivery** and click **Run simulation**. Follow the paced trace without clicking individual cards.
 
 Call out the stages as they appear:
 
@@ -40,15 +40,15 @@ Call out the stages as they appear:
 5. all cases and metrics recomputed;
 6. buyer acceptance and seller withdrawal.
 
-On the decision receipt, show the abstention before purchase and `contextual-rules` after verification. Point to the four integrity/provenance/terms/recomputation checks, 32/32 accuracy result, local-CPU timing label, and revealed sample rows.
+On the decision receipt, show the abstention before purchase and `contextual-rules` after verification. Point to the four-part evidence-value summary, the 75% → 100% comparison, +25 percentage-point lift, four integrity/provenance/terms/recomputation checks, 32/32 accuracy result, local-CPU timing label, and revealed sample rows.
 
 If this is testnet, open one transaction link and show that its target is the documented escrow. If this is simulation, point to the zero-transaction count and explicit simulation label.
 
 ## 2:15–3:20 — Run the buyer-protection path
 
-Select **Rejection + refund** and run the buyer again. On public testnet, wait at least one minute after creating the prior live run because the server spend limiter admits one live run per minute.
+Select **Invalid evidence → refund** and click **Replay simulation**. On public testnet, wait at least one minute after creating the prior live run because the server spend limiter admits one live run per minute.
 
-> This listing is an explicitly labeled fault-injection drill. The evaluator detects an output that does not recompute under the committed terms and rejects it before buyer reveal.
+> This scenario deliberately routes to a challenge dossier without exposing its defect in the public catalogue. The evaluator detects an output that does not recompute under the committed terms and rejects it before buyer reveal.
 
 Show that:
 
