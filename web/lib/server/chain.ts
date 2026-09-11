@@ -99,10 +99,9 @@ function clients(role: 'operator' | 'evaluator' | 'buyer') {
   };
 }
 
-export function liveChainEnabled(): boolean {
+export function liveChainConfigured(): boolean {
   return (
     env.DEMO_CHAIN_MODE === 'live' &&
-    env.PUBLIC_LIVE_RUNS_ENABLED === 'true' &&
     Boolean(
       env.BASE_SEPOLIA_RPC_URL &&
       env.EVALVAULT_CONTRACT_ADDRESS &&
@@ -110,6 +109,10 @@ export function liveChainEnabled(): boolean {
       env.BUYER_PRIVATE_KEY,
     )
   );
+}
+
+export function liveChainEnabled(): boolean {
+  return liveChainConfigured() && env.PUBLIC_LIVE_RUNS_ENABLED === 'true';
 }
 
 export function publicChainInfo() {

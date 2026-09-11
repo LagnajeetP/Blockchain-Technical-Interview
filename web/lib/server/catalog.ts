@@ -214,6 +214,9 @@ export async function ensureDemoCatalog(): Promise<ListingRecord[]> {
     !success.contractListingId &&
     success.termsHash !== expectedTerms,
   );
+  const simulationHasPublishedListings =
+    env.DEMO_CHAIN_MODE !== 'live' &&
+    current.some((listing) => Boolean(listing.contractListingId));
   const shouldRefresh =
     current.length < templates.length ||
     current.some(
@@ -222,6 +225,7 @@ export async function ensureDemoCatalog(): Promise<ListingRecord[]> {
         'EvalVault operator · private deterministic evaluator',
     ) ||
     seedChangedBeforeOnchainPublish ||
+    simulationHasPublishedListings ||
     (env.DEMO_CHAIN_MODE !== 'live' &&
       currentSellerPlan(current).action !== 'hold');
   return shouldRefresh ? createDemoCatalog() : current;

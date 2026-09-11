@@ -30,6 +30,7 @@ type RunRow = {
   stage: RunRecord['stage'];
   chain_mode: RunRecord['chainMode'];
   selected_listing_id: string | null;
+  selected_listing_commitment: string | null;
   selected_candidate_id: string | null;
   decision_reason: string | null;
   contract_order_id: string | null;
@@ -99,6 +100,7 @@ function runFromRow(row: RunRow): StoredRun {
     stage: row.stage,
     chainMode: row.chain_mode,
     selectedListingId: row.selected_listing_id,
+    selectedListingCommitment: row.selected_listing_commitment,
     selectedCandidateId: row.selected_candidate_id,
     decisionReason: row.decision_reason,
     contractOrderId: row.contract_order_id,
@@ -189,9 +191,10 @@ export async function insertRun(
     .prepare(
       `INSERT INTO agent_runs (
         id, token_hash, scenario, goal, status, stage, chain_mode, selected_listing_id,
-        selected_candidate_id, decision_reason, contract_order_id, trace_json,
-        tx_hashes_json, result_json, error, lock_until, created_at, updated_at, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+        selected_listing_commitment, selected_candidate_id, decision_reason,
+        contract_order_id, trace_json, tx_hashes_json, result_json, error, lock_until,
+        created_at, updated_at, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
     )
     .bind(
       run.id,
@@ -202,6 +205,7 @@ export async function insertRun(
       run.stage,
       run.chainMode,
       run.selectedListingId,
+      run.selectedListingCommitment,
       run.selectedCandidateId,
       run.decisionReason,
       run.contractOrderId,

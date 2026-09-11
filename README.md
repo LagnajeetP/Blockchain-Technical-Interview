@@ -67,7 +67,7 @@ React/Vinext workbench + WebMCP tool
           EvalVaultEscrow.sol
 ```
 
-Each live transaction is simulated and signed, then its hash and serialized payload are durably stored **before** broadcast. A retry reconciles that exact intent and receipt before another economic action. Confirmed intents erase the signed payload. Run updates use owner-bound compare-and-swap locks so an expired worker cannot overwrite newer state.
+Each live transaction is simulated and signed, then its hash and serialized payload are durably stored **before** broadcast. A retry reconciles that exact intent and receipt before another economic action. Confirmed intents erase the signed payload. Run updates use owner-bound compare-and-swap locks so an expired worker cannot overwrite newer state. A run is bound to the selected artifact commitment; live staging disables public runs instead of falling back to free simulation over the paid catalog.
 
 ## Run locally
 
@@ -100,7 +100,7 @@ make build
 make test
 ```
 
-Live local or Base Sepolia configuration is described in [`web/.env.example`](./web/.env.example) and [`contracts/DEPLOYMENT.md`](./contracts/DEPLOYMENT.md). Never commit `.dev.vars`, `.env`, private keys, bearer tokens, or the private evaluation seed.
+Live local or Base Sepolia configuration is described in [`web/.env.example`](./web/.env.example) and [`contracts/DEPLOYMENT.md`](./contracts/DEPLOYMENT.md). The prepared actor addresses, current funding state, and exact post-funding release sequence are in the [`Base Sepolia handoff`](./docs/BASE_SEPOLIA_HANDOFF.md). Never commit `.dev.vars`, `.env`, private keys, bearer tokens, or the private evaluation seed.
 
 ## Verified evidence so far
 
@@ -121,7 +121,7 @@ These transaction hashes are recorded in the [roadmap](./docs/TECHNICAL_ROADMAP.
 | Local real-transaction integration | Complete |
 | Public GitHub repository | Complete |
 | Hosted simulation demo | Complete and publicly accessible |
-| Base Sepolia contract and explorer receipts | Pending funded testnet actors |
+| Base Sepolia contract and explorer receipts | Actors/config prepared; pending faucet funding |
 | Walkthrough video ≤5 minutes | Pending recording; use the [demo script](./docs/DEMO_SCRIPT.md) |
 
 ## Research basis

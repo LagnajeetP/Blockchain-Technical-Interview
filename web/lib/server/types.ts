@@ -1,4 +1,8 @@
-import type { Goal, PrivateEvaluationReport, PublicListing } from '@/lib/evidence';
+import type {
+  Goal,
+  PrivateEvaluationReport,
+  PublicListing,
+} from '@/lib/evidence';
 
 export type Scenario = 'success' | 'refund';
 export type ChainMode = 'simulation' | 'live';
@@ -30,6 +34,7 @@ export interface RunRecord {
   stage: RunStage;
   chainMode: ChainMode;
   selectedListingId: string | null;
+  selectedListingCommitment: string | null;
   selectedCandidateId: string | null;
   decisionReason: string | null;
   contractOrderId: string | null;
@@ -67,7 +72,10 @@ export interface ListingRecord extends PublicListing {
   fixtureKind: 'valid' | 'invalid';
 }
 
-export type PublicListingRecord = Omit<ListingRecord, 'priceWei' | 'objectKey' | 'fixtureKind'> & {
+export type PublicListingRecord = Omit<
+  ListingRecord,
+  'priceWei' | 'objectKey' | 'fixtureKind'
+> & {
   priceWei: string;
 };
 

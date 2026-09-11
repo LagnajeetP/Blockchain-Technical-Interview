@@ -1,4 +1,8 @@
-import { RunBusyError, createRun } from '@/lib/server/workflow';
+import {
+  RunBusyError,
+  RunUnavailableError,
+  createRun,
+} from '@/lib/server/workflow';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +14,16 @@ export async function POST(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
-    const status = error instanceof RunBusyError ? 429 : 400;
+    const status =
+      error instanceof RunUnavailableError
+        ? 503
+        : error instanceof RunBusyError
+          ? 429
+          : 400;
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Unable to create run' },
+      {
+        error: error instanceof Error ? error.message : 'Unable to create run',
+      },
       { status, headers: { 'Cache-Control': 'no-store' } },
     );
   }

@@ -14,6 +14,7 @@ import {
   broadcastPrepared,
   chainActors,
   confirmEvent,
+  liveChainConfigured,
   liveChainEnabled,
   prepareAccept,
   prepareBuy,
@@ -70,6 +71,38 @@ const ABSOLUTE_MAX_EVIDENCE_SPEND_WEI = 10_000_000_000_000n;
 
 export class RunBusyError extends Error {}
 export class PendingConfirmationError extends Error {}
+export class RunUnavailableError extends Error {}
+
+function assertPublicRunAccess(run?: RunRecord): void {
+  const liveConfigured = liveChainConfigured();
+  const liveEnabled = liveChainEnabled();
+  if (liveConfigured && !liveEnabled) {
+    throw new RunUnavailableError(
+      'The evidence market is unavailable while the live catalog is being prepared',
+    );
+  }
+  const activeMode = liveEnabled ? 'live' : 'simulation';
+  if (run && run.chainMode !== activeMode) {
+    throw new RunUnavailableError(
+      'This run belongs to a marketplace mode that is no longer active',
+    );
+  }
+}
+
+function assertListingVersion(
+  run: RunRecord,
+  listing: ListingRecord | null,
+): asserts listing is ListingRecord {
+  if (!listing) throw new Error('Selected listing is unavailable');
+  if (
+    !run.selectedListingCommitment ||
+    run.selectedListingCommitment !== listing.commitment
+  ) {
+    throw new RunUnavailableError(
+      'The selected listing version is no longer active; start a new run',
+    );
+  }
+}
 
 function evidenceBudget(): bigint {
   const raw = env.LIVE_RUN_BUDGET_WEI || DEFAULT_BUDGET_WEI.toString();
@@ -187,6 +220,7 @@ function validateInput(value: unknown): { goal: Goal; scenario: Scenario } {
 
 export async function createRun(value: unknown) {
   const { goal, scenario } = validateInput(value);
+  assertPublicRunAccess();
   const listings = await ensureDemoCatalog();
   const chainMode = liveChainEnabled()
     ? ('live' as const)
@@ -244,6 +278,7 @@ export async function createRun(value: unknown) {
     stage: 'selected',
     chainMode,
     selectedListingId: chosen.id,
+    selectedListingCommitment: chosen.commitment,
     selectedCandidateId: null,
     decisionReason:
       scenario === 'refund'
@@ -295,9 +330,11 @@ export async function authorizedRun(
 }
 
 export async function getPublicRun(run: RunRecord) {
+  assertPublicRunAccess(run);
   const listing = run.selectedListingId
     ? await getListing(run.selectedListingId)
     : null;
+  assertListingVersion(run, listing);
   return {
     run: await hydratedPublicRun(run, listing),
     chain: publicChainInfo(),
@@ -851,6 +888,7 @@ async function advanceLive(
 export async function advanceRun(id: string, request: Request) {
   const initial = await authorizedRun(id, request);
   if (!initial) return null;
+  assertPublicRunAccess(initial);
   if (initial.expiresAt < now()) throw new Error('Run token expired');
   if (initial.stage === 'complete' || initial.stage === 'failed')
     return getPublicRun(initial);
@@ -864,7 +902,7 @@ export async function advanceRun(id: string, request: Request) {
     const listing = run.selectedListingId
       ? await getListing(run.selectedListingId)
       : null;
-    if (!listing) throw new Error('Selected listing is unavailable');
+    assertListingVersion(run, listing);
     try {
       if (run.chainMode === 'live') await advanceLive(run, listing, lockOwner);
       else await advanceSimulation(run, listing);

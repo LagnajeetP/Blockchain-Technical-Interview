@@ -2,7 +2,7 @@
 
 Build a working evidence market: seller agents publish private evaluations, a buyer buys useful evidence under a budget, on-chain escrow protects the exchange, and verified evidence changes a routing decision.
 
-Status as of 2026-09-11: the application, escrow, private-evidence workflow, and both local-chain outcomes are implemented. Public hosting and a funded Base Sepolia deployment remain open. This file is the milestone record; only rows marked **Complete** are claims of completion.
+Status as of 2026-09-11: the application, escrow, private-evidence workflow, both local-chain outcomes, and public hosting are implemented. Dedicated Base Sepolia actors are prepared and live spending is disabled; funding and public receipts remain open. This file is the milestone record; only rows marked **Complete** are claims of completion.
 
 ## Product decisions
 
@@ -21,10 +21,10 @@ Status as of 2026-09-11: the application, escrow, private-evidence workflow, and
 | M1 | Scaffold, private configuration, local chain tooling | **Complete** | Vinext/Workers/D1/R2 app, Foundry project, local Anvil deployment, ignored local secrets, reproducible commands |
 | M2 | Escrow and accounting | **Complete** | 24 passing Solidity tests, including success, all refund paths, replay guards, withdrawals, fuzzing, and 8,192 invariant calls |
 | M3 | Real private evaluation and agent policies | **Complete** | 13 passing core tests; 32-case deterministic suite is recomputed; seller refresh/pricing and buyer stale, duplicate, eligibility, budget, and routing decisions are deterministic |
-| M4 | Durable API, private reveal, transaction recovery | **Complete** | Hashed bearer capabilities, D1 locks and state, private R2 envelopes, report redaction, resumable steps, and signed transaction intents persisted before broadcast |
+| M4 | Durable API, private reveal, transaction recovery | **Complete** | Hashed bearer capabilities, commitment-bound runs, D1 locks and state, private R2 envelopes, report redaction, resumable steps, and signed transaction intents persisted before broadcast |
 | M5 | Complete usable interface | **Complete** | Goal → selection → funding → reveal/verification → decision UI plus an explicit reject/refund path that never reveals the report |
 | M6 | Integrated local validation | **Complete** | Full success and refund flows executed against a deployed Anvil contract with real signed transactions and reconciled receipts |
-| M7 | Public testnet deployment | **Pending** | Requires funded Base Sepolia actors; no public address or explorer receipt is claimed yet |
+| M7 | Public testnet deployment | **Ready for funding** | Three dedicated actors and ignored `0600` secret files are prepared; zero balances are verified and no public address or explorer receipt is claimed yet |
 | M8 | Public application and submission package | **In progress** | Public Sites release, public GitHub source, final README, deployment manifest, and demo script are complete; the recorded video remains |
 
 ## Execution ownership
@@ -47,8 +47,10 @@ The orchestration agent owns architecture, shared interfaces, integration, the h
 - Planning: `docs/BLACK_BOX_BAZAAR_PLAN.md` contains 30 primary or first-party source entries and was independently reviewed for differentiation, escrow ordering, latency accounting, and claims discipline.
 - Smart contract: `forge fmt --check` and `forge build` passed. All 24 tests passed: 23 unit/fuzz tests plus one invariant suite with 64 runs × 128 calls = 8,192 calls and zero invariant-handler reverts.
 - Evidence core: all 13 Node tests passed. The demo seed produces a measured 75% accuracy report for `fast-keyword` and 100% for `contextual-rules`; the verifier recomputes all 32 outputs, labels, correctness flags, finite timings, and aggregates. Seller tests cover cost-plus pricing and publish/refresh/hold decisions.
-- Web quality: lint, strict TypeScript, and the final five-stage Vinext production build passed after receipt hardening and dependency upgrades. The deployment artifact contains the Worker entry point, static assets, hosting manifest, and all three D1 migrations. `npm audit` reports zero known vulnerabilities.
-- Simulation API: the final smoke run completed success in 107 ms and refund in 39 ms, produced zero fake transaction hashes, rejected an unauthorized run read with 404, revealed the valid report only after delivery, and never revealed a report on refund.
+- Web quality: lint, strict TypeScript, and the final five-stage Vinext production build passed after receipt hardening and dependency upgrades. The deployment artifact contains the Worker entry point, static assets, hosting manifest, and all four D1 migrations. `npm audit` reports zero known vulnerabilities.
+- Release security: the final independent audit found no release blocker or high-severity issue in the contract, live-mode controls, receipt binding, lock ownership, signer constraints, or private-report reveal path.
+- Simulation API: the final smoke run completed success in 113 ms and refund in 42 ms, produced zero fake transaction hashes, rejected an unauthorized run read with 404, revealed the valid report only after delivery, and never revealed a report on refund.
+- Deployment-transition privacy: with live configuration present and public spending disabled, new runs plus legacy-run reads and advances all returned 503. A simulation run whose stored listing commitment was replaced also returned 503 and exposed no report.
 - Hosted release: `https://evalvault-evidence-market.lpsp.chatgpt.site` is public and returned HTTP 200 with a 111 ms observed first-byte time during release verification. Its explicit simulation catalog exposed no private fields; hosted success completed in 3,092 ms and hosted refund in 1,457 ms with zero transaction hashes.
 - Private-data check: the public catalog omits storage keys, fixture types, seeds, scores, cases, and latencies. Persisted run JSON was queried and contained no `evaluationSeed`; authorized responses hydrate the report from R2 only after the trace records `Evidence unlocked`.
 - Post-hardening local success proof: Anvil order `3` completed in 156 ms with the route changed to `contextual-rules`. Funding `0x6cb5f93f8abd67a54818c3f7cbe5b0bfaef7df3568f360f62379f93786fd9ff4`, delivery `0x6fcf21462026de481d16cd77a8a66e3c1b2d5656865bb825153780de2433d81e`, release `0x219bd55f2e8afe3bab75db36deb884e827ba8a101400502b3080381b3b397472`, withdrawal `0xba6deab2f4afa6191976f353bcc30ae6de1a92ba0354178a29ee33d55910a7c4`.
@@ -59,7 +61,7 @@ The orchestration agent owns architecture, shared interfaces, integration, the h
 
 Still required from outside the codebase:
 
-- Base Sepolia test ETH for the operator/evaluator and buyer accounts before M7 can produce public receipts. Keys must be supplied through local or hosted secrets, never chat or source control.
+- One human-verified faucet claim for the prepared operator, followed by actor funding if the drip is under 0.005 test ETH. The exact public addresses and automated post-funding sequence are in `docs/BASE_SEPOLIA_HANDOFF.md`; keys already exist only in ignored local secret files.
 - A human-recorded walkthrough of five minutes or less for the final submission. `docs/DEMO_SCRIPT.md` will provide the shot list.
 
 Hosted-model credentials are optional because the submitted evidence is a real, deterministic, locally measured routing evaluation and is labeled as such. The public hosted demo will default to explicit simulation until constrained live-signing secrets are configured.
@@ -69,13 +71,13 @@ Hosted-model credentials are optional because the submitted evidence is a real, 
 - Product research, vertical choice, threat model, architecture, and delivery plan.
 - Native-ETH escrow with immutable listing terms, pinned evaluator, exact-price funding, request deduplication, delivery, acceptance, dispute, timeout, pull refunds, and pull seller withdrawals.
 - Deterministic private evaluation, strict recomputation, policy selection, and a before/after routing decision.
-- D1/R2 persistence, capability-token access, server-side report redaction, retry locks, transaction-intent recovery, receipt verification, spend cap, fixed chain/contract destinations, and a one-live-run-per-minute lease.
+- D1/R2 persistence, capability-token access, commitment-bound artifact hydration, live-staging maintenance gates, server-side report redaction, retry locks, transaction-intent recovery, receipt verification, spend cap, fixed chain/contract destinations, and a one-live-run-per-minute lease.
 - Responsive buyer workbench, explicit simulation/live labeling, success and refund scenarios, integrity checks, decision evidence, timing trace, and transaction links when live.
 - Full local success and reject/refund journeys using a real deployed contract and real signed local transactions.
 
 ## Not done yet
 
-- Deploy and seed the escrow on Base Sepolia; execute public success and refund receipts after wallets receive test ETH.
+- Fund the prepared actors, deploy and seed the escrow on Base Sepolia, and execute public success and refund receipts. The unattended work is prepared; the faucet's bot check is external.
 - Record the short submission video.
 - Validate the registered WebMCP tool in a WebMCP-capable client. The visible UI and HTTP workflow are implemented; this client-level check has not been claimed.
 
@@ -88,3 +90,4 @@ Hosted-model credentials are optional because the submitted evidence is a real, 
 - 2026-09-11 — Local live proof: deployed and seeded the escrow on Anvil, then completed both the seller-payment path and the invalid-artifact refund path. M6 moved to Complete.
 - 2026-09-11 — Release hardening: added seller/expiry binding, sender and unique-event checks, owner-bound run locks, aggregate-credit receipt handling, honest local/simulation network labels, seller publish/refresh/hold policy, a reproducible local migration command, and dependency upgrades with a clean audit.
 - 2026-09-11 — Public release: pushed the reviewed source to the public GitHub repository, published the Sites application, verified HTTP/catalog privacy, and completed both hosted simulation outcomes. M8 remains open only for the human-recorded video.
+- 2026-09-11 — Testnet preparation: generated isolated operator, evaluator, and buyer actors into ignored `0600` files; verified chain ID 84532 and zero balances; kept live spending disabled; blocked free simulation access during live staging; bound runs to immutable artifact commitments; and documented the funding and automated release runbook. M7 moved to Ready for funding.

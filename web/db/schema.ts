@@ -29,6 +29,7 @@ export const agentRuns = sqliteTable('agent_runs', {
   stage: text('stage').notNull(),
   chainMode: text('chain_mode').notNull(),
   selectedListingId: text('selected_listing_id'),
+  selectedListingCommitment: text('selected_listing_commitment'),
   selectedCandidateId: text('selected_candidate_id'),
   decisionReason: text('decision_reason'),
   contractOrderId: text('contract_order_id'),

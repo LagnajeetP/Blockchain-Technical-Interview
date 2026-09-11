@@ -10,7 +10,7 @@ import {
   broadcastPrepared,
   chainActors,
   confirmEvent,
-  liveChainEnabled,
+  liveChainConfigured,
   prepareCreateListing,
 } from '@/lib/server/chain';
 import {
@@ -36,11 +36,11 @@ export async function POST(request: Request) {
       { error: 'Operator authorization required' },
       { status: 401 },
     );
-  if (!liveChainEnabled()) {
+  if (!liveChainConfigured()) {
     return Response.json(
       {
         error:
-          'Live Base Sepolia configuration must be complete and explicitly enabled before seeding',
+          'Live Base Sepolia configuration must be complete before seeding',
       },
       { status: 503 },
     );

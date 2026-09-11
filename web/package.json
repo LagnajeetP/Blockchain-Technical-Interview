@@ -12,6 +12,7 @@
     "lint": "oxlint app lib db",
     "format": "oxfmt",
     "db:local": "wrangler d1 migrations apply DB --local --config dist/server/wrangler.json --persist-to .wrangler/state",
+    "prepare:base-sepolia": "node scripts/prepare-base-sepolia.mjs",
     "test:core": "tsx --test ../core/evidence.test.ts",
     "test:api": "node scripts/api-smoke.mjs"
   },
