@@ -1,9 +1,11 @@
 # Base Sepolia release handoff
 
-Status as of 2026-09-11: the actors and secret configuration are prepared, their
-balances were verified as zero through the public Base Sepolia RPC, and public live
-runs remain disabled. No private key appears in this document, Git, terminal output,
-or chat.
+Status as of 2026-09-11: the actors are funded and the escrow is deployed at
+[`0x8cfeefb05e683b4a6dfd0163af42167c75e5699f`](https://sepolia.basescan.org/address/0x8cfeefb05e683b4a6dfd0163af42167c75e5699f).
+Two committed listings, a full successful settlement, and an evaluator-rejected
+buyer refund have confirmed Base Sepolia receipts. Browser-triggered public live
+runs remain disabled while the protected hosted signer configuration is staged.
+No private key appears in this document or Git.
 
 ## Prepared actors
 
@@ -23,7 +25,7 @@ ignored files `contracts/.env` and `web/.env.base-sepolia.local`, both with mode
 Running `npm run prepare:base-sepolia` again refuses to overwrite either file, so an
 accidental rerun cannot silently rotate a funded actor.
 
-## One action needed from the owner
+## Historical funding note
 
 Use the [QuickNode Base Sepolia faucet](https://faucet.quicknode.com/base/sepolia)
 with the **operator address** above. Its current provider page says the base drip
@@ -37,7 +39,7 @@ needed. These are valueless testnet funds; do not send mainnet ETH.
 
 Other current primary-source options are Base's [Get Funds guide](https://docs.base.org/get-started/get-funds), the [Coinbase CDP faucet quickstart](https://docs.cdp.coinbase.com/faucets/introduction/quickstart), and the [Alchemy Base Sepolia faucet](https://www.alchemy.com/faucets/base-sepolia). CDP requires a login or an API key for automation. Alchemy's no-login path requires at least 0.001 ETH on Ethereum mainnet plus sufficient mainnet activity. No documented anonymous faucet API was found. QuickNode may require interactive verification, and faucet eligibility, availability, and fulfillment are not guaranteed.
 
-## Automated release sequence after funding
+## Hosted live-mode release sequence
 
 The remaining runbook is deterministic and owned by this project:
 

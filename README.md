@@ -42,7 +42,7 @@ Public listings contain task scope, coverage, freshness, price, provenance, and 
 5. Review the decision receipt, verification checks, and revealed evidence.
 6. Switch to **Guided demo** and run **Invalid → refund** to see buyer protection without private-case disclosure.
 
-The public application currently runs the complete interaction in explicit simulation mode. The Base Sepolia deployment configuration and dedicated actors are prepared; public contract receipts will be added after faucet funding. See the [Base Sepolia handoff](./docs/BASE_SEPOLIA_HANDOFF.md) for the exact release sequence.
+The public application currently presents the complete interaction in explicit simulation mode. The underlying escrow is deployed on Base Sepolia at [`0x8cfe…699f`](https://sepolia.basescan.org/address/0x8cfeefb05e683b4a6dfd0163af42167c75e5699f), with two committed listings and confirmed successful-settlement and refund journeys. The protected hosted signer configuration remains disabled while the public demo uses simulation. See the [Base Sepolia handoff](./docs/BASE_SEPOLIA_HANDOFF.md) for the release sequence.
 
 ## Design choices
 

@@ -24,7 +24,7 @@ Status as of 2026-09-11: the application, interactive buyer workbench, escrow, p
 | M4 | Durable API, private reveal, transaction recovery | **Complete** | Hashed bearer capabilities, commitment-bound runs, D1 locks and state, private R2 envelopes, report redaction, resumable steps, and signed transaction intents persisted before broadcast |
 | M5 | Complete usable interface | **Complete** | Interactive Workshop-style three-pane UI; manual goal → catalogue selection → one-stage-at-a-time funding, evaluation, reveal, verification, acceptance, and withdrawal; refresh-safe resume; separate guided success/refund paths; commodity terms and buyer-value receipt |
 | M6 | Integrated local validation | **Complete** | Full success and refund flows executed against a deployed Anvil contract with real signed transactions and reconciled receipts |
-| M7 | Public testnet deployment | **Ready for funding** | Three dedicated actors and ignored `0600` secret files are prepared; zero balances are verified and no public address or explorer receipt is claimed yet |
+| M7 | Public testnet deployment | **Complete** | Base Sepolia escrow, two commitment-bound listings, successful delivery/payment/withdrawal, and evaluator-rejected buyer refund have confirmed receipts |
 | M8 | Public application and submission package | **In progress** | Public Sites release, public GitHub source, final README, deployment manifest, and demo script are complete; the recorded video remains |
 
 ## Execution ownership
@@ -83,7 +83,7 @@ Hosted-model credentials are optional because the submitted evidence is a real, 
 
 ## Not done yet
 
-- Fund the prepared actors, deploy and seed the escrow on Base Sepolia, and execute public success and refund receipts. The unattended work is prepared; the faucet's bot check is external.
+- Move the protected hosted signer configuration through an owner-only staging pass before enabling a browser-triggered public testnet workflow. The public UI intentionally remains a simulation while that integration is closed.
 - Record the short submission video.
 
 ## Progress log
@@ -101,3 +101,4 @@ Hosted-model credentials are optional because the submitted evidence is a real, 
 - 2026-09-11 — Refined public release: published Sites version 3 from commit `db33835`, verified the public desktop and mobile presentation, completed both hosted API outcomes, checked catalogue redaction and commodity terms, and invoked the public WebMCP simulation through its client integration.
 - 2026-09-11 — Interactive purchase release: made direct catalogue selection the default, added one-stage-at-a-time persisted purchase controls and resume behavior, separated the guided success/refund demo, and removed the catalogue marker that disclosed which sealed dossier would fail evaluation. M5 remains Complete; M7 remains Ready for funding and M8 remains open only for video.
 - 2026-09-11 — Interactive public verification: deployed Sites version 5, confirmed the public catalogue and all three purchase paths, and synchronized legacy catalogue metadata without changing artifact commitments. The remaining submission action is the human-recorded walkthrough.
+- 2026-09-11 — Public Base Sepolia proof: deployed the escrow at [`0x8cfe…699f`](https://sepolia.basescan.org/address/0x8cfeefb05e683b4a6dfd0163af42167c75e5699f) in [deployment `0x7ce7…ae45`](https://sepolia.basescan.org/tx/0x7ce75b93e9277550f31b194643650525d349ba3cff08b11cda7191dc6c40ae45), seeded [listing 1](https://sepolia.basescan.org/tx/0xc8e350937359a9e884b5f19ac0f00588d45481d11b437c6607619d7c2906831d) and [listing 2](https://sepolia.basescan.org/tx/0xe14a6ff9b2738569596bf99afc3e7de6816dd392fcb55769858cb286cb898193), and confirmed the complete [success settlement](https://sepolia.basescan.org/tx/0x3f8d9e6480016d5ea8b1fa06cc67937f9ea951c1a05f5d74fe2722d045911d73) plus [buyer refund](https://sepolia.basescan.org/tx/0x5be71566255c70023ce58b4d6d1b0f724242b757dc8f96d1b32ea4b42a1e7d97) paths. M7 moved to Complete.
