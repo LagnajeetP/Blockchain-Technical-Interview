@@ -687,17 +687,6 @@ export default function Home() {
             </Button>
           )}
 
-          <div className="mode-note">
-            <strong>
-              {isSimulation ? 'Simulation mode' : 'Live testnet mode'}
-            </strong>
-            <span>
-              {isSimulation
-                ? 'No wallet or funds needed. Every manual action is persisted through the real buyer policy and escrow state machine.'
-                : 'A configured constrained buyer signer submits the fixed Base Sepolia contract calls; each action waits for its receipt.'}
-            </span>
-          </div>
-
           <dl className="mandate-grid">
             <div>
               <dt>Accuracy floor</dt>

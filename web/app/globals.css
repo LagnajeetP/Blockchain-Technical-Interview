@@ -226,32 +226,6 @@ h2 {
   line-height: 1.6;
 }
 
-.mode-note {
-  margin: 13px 0 18px;
-  padding: 13px 14px;
-  border: 1px solid rgb(114 245 255 / 26%);
-  background: rgb(114 245 255 / 4%);
-}
-
-.mode-note strong,
-.mode-note span {
-  display: block;
-}
-
-.mode-note strong {
-  margin-bottom: 5px;
-  color: var(--verified);
-  font: 700 9px var(--font-geist-mono);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.mode-note span {
-  color: #aaa79d;
-  font-size: 11px;
-  line-height: 1.48;
-}
-
 .control-field {
   min-width: 0;
   margin: 0 0 20px;
