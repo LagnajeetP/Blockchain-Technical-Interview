@@ -13,7 +13,9 @@ The hosted demo is deliberately labeled **simulation** until funded Base Sepolia
 - The **evaluator** is a disclosed, pinned referee. It attests delivery or rejects malformed evidence and adjudicates objective disputes.
 - `EvalVaultEscrow` holds native ETH until a release or refund becomes final.
 
-The interface runs this entire buyer loop as a paced, replayable simulation from one goal. The success path makes all seven stages visible and ends with a before/after decision-value receipt. The fault-injection path demonstrates a real protocol rejection: it refunds the buyer without revealing private cases.
+The default interface is an interactive buyer workbench: choose a goal, inspect the public catalogue and terms, select a sealed dossier, and start a purchase. Each control advances exactly one persisted stage, from escrow funding through evaluation, reveal, recomputation, acceptance, and withdrawal. The receipt shows the before/after routing decision, and a refresh resumes the same capability-gated run. In the current hosted release the controls run against the explicit simulation backend; once the funded Base Sepolia configuration is installed, the same interaction drives bounded live transactions. If a selected dossier fails its committed terms, the evaluator refunds the buyer without revealing private cases.
+
+The separate guided demo path is the registered `run_evidence_purchase_demo` WebMCP tool. It is useful for a repeatable walkthrough or client integration, but it does not replace the interactive workbench or change the hosted release's current simulation status.
 
 ## Public claims and paid evidence
 
@@ -84,7 +86,7 @@ npm run db:local
 npm run dev
 ```
 
-Open `http://localhost:3000`, choose a goal and outcome, then run the buyer. In another terminal, validate the explicit simulation API:
+Open `http://localhost:3000`, choose a goal and an eligible dossier, then advance the purchase through its visible stages. Switch to **Guided demo** for the paced success/refund walkthrough. In another terminal, validate the explicit simulation API:
 
 ```sh
 cd web
@@ -123,7 +125,7 @@ These transaction hashes are recorded in the [roadmap](./docs/TECHNICAL_ROADMAP.
 | Contract, application, success path, refund path | Complete |
 | Local real-transaction integration | Complete |
 | Public GitHub repository | Complete |
-| Hosted simulation demo | Complete and publicly accessible |
+| Hosted interactive demo | Complete and publicly accessible; currently explicit simulation |
 | Base Sepolia contract and explorer receipts | Actors/config prepared; pending faucet funding |
 | Walkthrough video ≤5 minutes | Pending recording; use the [demo script](./docs/DEMO_SCRIPT.md) |
 

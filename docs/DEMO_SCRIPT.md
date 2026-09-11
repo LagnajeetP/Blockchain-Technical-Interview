@@ -1,12 +1,13 @@
 # EvalVault demo script — 4 minutes 30 seconds
 
-This is the recording checklist for the required walkthrough. Do not show environment files, private keys, bearer tokens, the private evaluation seed, or terminal history containing secrets. Record the public application in a clean browser after the displayed mode and links have been verified.
+This is the recording checklist for the required walkthrough. The normal product path is the interactive workbench: the presenter selects a goal and sealed dossier, starts the purchase, and advances each persisted stage from the primary control. The guided success/refund experience and `run_evidence_purchase_demo` WebMCP invocation are separate repeatable demo paths. Do not show environment files, private keys, bearer tokens, the private evaluation seed, or terminal history containing secrets. Record the public application in a clean browser after the displayed mode and links have been verified.
 
 ## Before recording
 
 - Confirm the app badge says exactly `simulation`, `local`, or `testnet`, matching the endpoint in use.
 - For the final testnet recording, open the deployed contract and the prepared success/refund transaction links in separate tabs.
 - Start on a fresh session so no purchased report is already visible.
+- Use the primary interactive control for the main recording; reserve the guided WebMCP tool for a separate short integration shot if desired.
 - Keep the browser wide enough to show the mandate, market, and execution trace together.
 - Stop if any private case appears before `Evidence unlocked` or if a local hash is linked to Basescan.
 
@@ -16,20 +17,20 @@ This is the recording checklist for the required walkthrough. Do not show enviro
 
 Point to the mode badge. If it says `simulation`, say that this hosted run exercises the full durable workflow without claiming a public transaction. If it says `testnet`, open the contract link once and return to the app.
 
-## 0:35–1:05 — Show autonomous selection
+## 0:35–1:05 — Select public evidence
 
-Choose **Quality**. Briefly point to the access, settlement, delivery, and buyer-protection terms, then point out:
+Choose **Quality** in the workbench. Briefly point to the access, settlement, delivery, and buyer-protection terms, then point out:
 
 - the owned keyword-router evidence, rejected as already purchased;
 - the stale contextual report, rejected on public metadata;
 - the fresh sealed contextual report, still showing no score;
 - the 0.000002 ETH spend cap and 90% accuracy floor.
 
-> The buyer can filter these claims before payment, but it cannot rank with the hidden score. It selects the eligible dossier using declared scope, freshness, sample count, and price.
+> The buyer can reject claims before payment, but it cannot use the hidden score. I can choose between eligible dossiers using declared scope, freshness, sample count, price, and commitments; the server rechecks every policy rule before opening a run.
 
 ## 1:05–2:15 — Run the successful purchase
 
-Select **Successful delivery** and click **Run simulation**. Follow the paced trace without clicking individual cards.
+Keep **Interactive** selected, choose **sealed evaluation A**, and click **Start selected purchase**. Use the primary control once for each action: fund escrow, evaluate delivery, unlock evidence, verify evidence, accept evidence, and withdraw proceeds. Point out that each click changes only one durable protocol stage and the run can be resumed after refresh.
 
 Call out the stages as they appear:
 
@@ -46,7 +47,7 @@ If this is testnet, open one transaction link and show that its target is the do
 
 ## 2:15–3:20 — Run the buyer-protection path
 
-Select **Invalid evidence → refund** and click **Replay simulation**. On public testnet, wait at least one minute after creating the prior live run because the server spend limiter admits one live run per minute.
+Switch to **Guided demo**, select **Invalid → refund**, and click **Run guided demo**. On public testnet, wait at least one minute after creating the prior live run because the server spend limiter admits one live run per minute.
 
 > This scenario deliberately routes to a challenge dossier without exposing its defect in the public catalogue. The evaluator detects an output that does not recompute under the committed terms and rejects it before buyer reveal.
 

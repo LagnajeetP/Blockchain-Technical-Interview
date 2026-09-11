@@ -55,7 +55,7 @@ const templates: ListingTemplate[] = [
   {
     id: SUCCESS_LISTING_ID,
     candidateId: 'contextual-rules',
-    title: 'Context-aware routing · sealed evaluation',
+    title: 'Context-aware routing · sealed evaluation A',
     summary:
       'Task-matched 32-case evidence for support ticket queue and urgency routing.',
     priceWei: BigInt('1000000000000'),
@@ -85,9 +85,9 @@ const templates: ListingTemplate[] = [
   {
     id: FAULT_LISTING_ID,
     candidateId: 'contextual-rules',
-    title: 'Context-aware routing · challenge listing',
+    title: 'Context-aware routing · sealed evaluation B',
     summary:
-      'A 32-case dossier offered under the same public terms for the buyer-protection demonstration.',
+      'A second 32-case dossier offered under the same scope, price, and verification terms.',
     priceWei: BigInt('1000000000000'),
     ageMs: 5 * 60_000,
     fixtureKind: 'invalid',

@@ -406,6 +406,14 @@ h2 {
   background: #ffda68;
 }
 
+.run-button:disabled {
+  border-color: var(--border-strong);
+  background: #26241d;
+  color: #77736a;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .guardrail {
   margin-top: 13px;
   color: #7d7a72;
@@ -714,6 +722,16 @@ h2 {
   color: #77756d;
   font: 8px var(--font-geist-mono);
   white-space: nowrap;
+}
+
+.select-listing {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border-radius: 2px;
+  font: 700 9px var(--font-geist-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .loading-card {

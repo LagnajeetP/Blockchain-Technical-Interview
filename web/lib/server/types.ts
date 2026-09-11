@@ -4,7 +4,7 @@ import type {
   PublicListing,
 } from '@/lib/evidence';
 
-export type Scenario = 'success' | 'refund';
+export type Scenario = 'success' | 'refund' | 'market';
 export type ChainMode = 'simulation' | 'live';
 export type RunStage =
   | 'selected'
@@ -48,6 +48,7 @@ export interface RunRecord {
 }
 
 export interface RunResult {
+  selectionMode?: 'policy' | 'manual';
   report?: PrivateEvaluationReport;
   validation?: {
     valid: boolean;

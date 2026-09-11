@@ -35,7 +35,6 @@ type ChainInfo = {
 type CatalogPayload = {
   listings: PublicListingRecord[];
   ownedListingIds: string[];
-  protocolDrillListingId: string;
   sellerAgent: {
     agentId: string;
     action: 'publish' | 'refresh' | 'hold';
@@ -57,6 +56,8 @@ type CatalogPayload = {
 };
 
 type RunPayload = { run: PublicRun; chain: ChainInfo; token?: string };
+type DemoScenario = Exclude<Scenario, 'market'>;
+type Experience = 'interactive' | 'demo';
 
 type WebMcpContext = {
   registerTool: (
@@ -95,6 +96,16 @@ const stageNumber: Record<string, number> = {
   failed: 7,
 };
 
+const nextAction: Record<string, string> = {
+  selected: 'Fund escrow',
+  funded: 'Evaluate delivery',
+  delivered: 'Unlock evidence',
+  revealed: 'Verify evidence',
+  verified: 'Accept evidence',
+  accepted: 'Withdraw seller proceeds',
+  refunded: 'Withdraw buyer refund',
+};
+
 const sleep = (milliseconds: number) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -129,7 +140,10 @@ function shortHash(value?: string) {
   return `${value.slice(0, 8)}…${value.slice(-6)}`;
 }
 
-function validateToolInput(value: unknown): { goal: Goal; scenario: Scenario } {
+function validateToolInput(value: unknown): {
+  goal: Goal;
+  scenario: DemoScenario;
+} {
   const input = value as { goal?: unknown; scenario?: unknown };
   if (
     !input ||
@@ -140,12 +154,19 @@ function validateToolInput(value: unknown): { goal: Goal; scenario: Scenario } {
   if (!['success', 'refund'].includes(String(input.scenario))) {
     throw new Error('scenario must be success or refund');
   }
-  return { goal: input.goal as Goal, scenario: input.scenario as Scenario };
+  return {
+    goal: input.goal as Goal,
+    scenario: input.scenario as DemoScenario,
+  };
 }
 
 export default function Home() {
   const [goal, setGoal] = useState<Goal>('quality');
-  const [scenario, setScenario] = useState<Scenario>('success');
+  const [experience, setExperience] = useState<Experience>('interactive');
+  const [scenario, setScenario] = useState<DemoScenario>('success');
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(
+    null,
+  );
   const [catalog, setCatalog] = useState<CatalogPayload | null>(null);
   const [run, setRun] = useState<PublicRun | null>(null);
   const [runToken, setRunToken] = useState<string | null>(null);
@@ -192,7 +213,13 @@ export default function Home() {
           setRun(payload.run);
           setRunToken(value.token);
           setGoal(payload.run.goal);
-          setScenario(payload.run.scenario);
+          setSelectedListingId(payload.run.selectedListingId);
+          if (payload.run.scenario === 'market') {
+            setExperience('interactive');
+          } else {
+            setExperience('demo');
+            setScenario(payload.run.scenario);
+          }
         })
         .catch(() => sessionStorage.removeItem('evalvault-active-run'));
     } catch {
@@ -244,11 +271,20 @@ export default function Home() {
   );
 
   const executeRun = useCallback(
-    async (selectedGoal: Goal, selectedScenario: Scenario) => {
+    async (
+      selectedGoal: Goal,
+      selectedScenario: Scenario,
+      listingId?: string,
+    ) => {
       setBusy(true);
       setError(null);
       setGoal(selectedGoal);
-      setScenario(selectedScenario);
+      if (selectedScenario === 'market') {
+        setExperience('interactive');
+      } else {
+        setExperience('demo');
+        setScenario(selectedScenario);
+      }
       try {
         const response = await fetch('/api/runs', {
           method: 'POST',
@@ -256,6 +292,9 @@ export default function Home() {
           body: JSON.stringify({
             goal: selectedGoal,
             scenario: selectedScenario,
+            ...(selectedScenario === 'market' && listingId
+              ? { listingId }
+              : {}),
           }),
         });
         const created = (await response.json()) as RunPayload & {
@@ -266,11 +305,15 @@ export default function Home() {
           throw new Error(created.error || 'Buyer run could not start');
         setRun(created.run);
         setRunToken(created.token);
+        setSelectedListingId(created.run.selectedListingId);
         sessionStorage.setItem(
           'evalvault-active-run',
           JSON.stringify({ id: created.run.id, token: created.token }),
         );
-        const finished = await progressRun(created, created.token);
+        const finished =
+          selectedScenario === 'market'
+            ? created
+            : await progressRun(created, created.token);
         return {
           runId: finished.run.id,
           status: finished.run.status,
@@ -323,6 +366,46 @@ export default function Home() {
     }
   }, [catalog, progressRun, run, runToken]);
 
+  const advanceInteractive = useCallback(async () => {
+    if (!run || !runToken) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const startingStage = run.stage;
+      for (let attempts = 0; attempts < 12; attempts += 1) {
+        const response = await fetch(`/api/runs/${run.id}/advance`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${runToken}` },
+        });
+        const next = (await response.json()) as RunPayload & {
+          error?: string;
+          retryable?: boolean;
+        };
+        if (
+          response.status === 202 ||
+          (response.status === 409 && next.retryable)
+        ) {
+          await sleep(response.status === 202 ? 2_500 : 500);
+          continue;
+        }
+        if (!response.ok)
+          throw new Error(next.error || 'Buyer run could not advance');
+        setRun(next.run);
+        if (next.run.stage !== startingStage) return;
+        await sleep(350);
+      }
+      throw new Error(
+        'This step is still waiting for chain confirmation. Try again to reconcile it.',
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : 'Run could not advance',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [run, runToken]);
+
   useEffect(() => {
     const context = (document as Document & { modelContext?: WebMcpContext })
       .modelContext;
@@ -373,12 +456,28 @@ export default function Home() {
   const report = run?.result?.report;
   const chain = catalog?.chain;
   const terminal = run?.stage === 'complete' || run?.stage === 'failed';
+  const activeRun = Boolean(run && !terminal);
+  const interactive = activeRun
+    ? run?.scenario === 'market'
+    : experience === 'interactive';
+  const activeSelectedListingId = activeRun
+    ? run?.selectedListingId
+    : selectedListingId;
   const isSimulation = chain?.mode !== 'live';
+  const isRefundOutcome = Boolean(
+    run &&
+    (run.status === 'refunded' ||
+      run.stage === 'refunded' ||
+      run.scenario === 'refund'),
+  );
   const accuracyLift = report
     ? report.metrics.accuracy - BASELINE_ACCURACY
     : null;
   const statusLine = (() => {
-    if (!run) return 'Ready · choose a path and run the buyer';
+    if (!run)
+      return interactive
+        ? 'Ready · select a dossier to begin'
+        : 'Ready · choose a guided outcome';
     if (!terminal) return `Running · ${run.trace.at(-1)?.label ?? 'starting'}`;
     if (run.status === 'refunded')
       return 'Complete · evidence rejected · funds returned';
@@ -397,10 +496,8 @@ export default function Home() {
           decision = 'Not selected · stale';
         else if (listing.sampleCount < 24)
           decision = 'Not selected · insufficient coverage';
-        else if (run?.selectedListingId === listing.id)
+        else if (activeSelectedListingId === listing.id)
           decision = 'Selected by buyer';
-        else if (listing.id === catalog.protocolDrillListingId)
-          decision = 'Buyer-protection scenario';
         return [listing.id, decision];
       }),
     );
@@ -408,18 +505,14 @@ export default function Home() {
   const displayedListings = catalog
     ? [...catalog.listings].sort((left, right) => {
         const priority = (listing: PublicListingRecord) => {
-          if (run?.selectedListingId === listing.id) return 0;
-          if (
-            scenario === 'refund' &&
-            listing.id === catalog.protocolDrillListingId
-          )
-            return 0;
-          if (listing.id === catalog.protocolDrillListingId) return 4;
+          if (activeSelectedListingId === listing.id) return 0;
           if (catalog.ownedListingIds.includes(listing.id)) return 3;
           if (referenceTime - listing.observedAt > 24 * 60 * 60_000) return 2;
           return 1;
         };
-        return priority(left) - priority(right);
+        return (
+          priority(left) - priority(right) || left.id.localeCompare(right.id)
+        );
       })
     : null;
 
@@ -444,14 +537,14 @@ export default function Home() {
 
       <div id="top" className="workbench">
         <aside className="policy-panel">
-          <div className="eyebrow">Buyer simulation</div>
+          <div className="eyebrow">Evidence purchase workspace</div>
           <h1>Buy evidence before choosing a model.</h1>
           <p className="lede">
             Choose a goal, fund sealed evidence, verify the result, and make a
             routing decision.
           </p>
 
-          <fieldset className="control-field" disabled={busy}>
+          <fieldset className="control-field" disabled={busy || activeRun}>
             <legend>Optimization goal</legend>
             <div className="goal-grid">
               {(Object.keys(goalCopy) as Goal[]).map((item) => (
@@ -478,46 +571,86 @@ export default function Home() {
             </div>
           </fieldset>
 
-          <fieldset className="control-field scenario-field" disabled={busy}>
-            <legend>Outcome to demonstrate</legend>
+          <fieldset
+            className="control-field scenario-field"
+            disabled={busy || activeRun}
+          >
+            <legend>Experience</legend>
             <div className="scenario-toggle">
               <button
                 type="button"
-                aria-pressed={scenario === 'success'}
-                onClick={() => setScenario('success')}
+                aria-pressed={experience === 'interactive'}
+                onClick={() => setExperience('interactive')}
               >
-                Successful delivery
+                Interactive
               </button>
               <button
                 type="button"
-                aria-pressed={scenario === 'refund'}
-                onClick={() => setScenario('refund')}
+                aria-pressed={experience === 'demo'}
+                onClick={() => setExperience('demo')}
               >
-                Invalid evidence → refund
+                Guided demo
               </button>
             </div>
             <p className="scenario-preview">
-              {scenario === 'success'
-                ? 'The buyer purchases a valid dossier, recomputes it, and changes its route.'
-                : 'The evaluator rejects invalid evidence; the buyer is refunded before reveal.'}
+              {experience === 'interactive'
+                ? 'Select a sealed dossier, purchase it, and advance escrow and verification one step at a time.'
+                : 'Run a paced, repeatable success or buyer-protection walkthrough.'}
             </p>
           </fieldset>
 
-          {run && !terminal ? (
+          {experience === 'demo' && (
+            <fieldset
+              className="control-field scenario-field"
+              disabled={busy || activeRun}
+            >
+              <legend>Guided outcome</legend>
+              <div className="scenario-toggle">
+                <button
+                  type="button"
+                  aria-pressed={scenario === 'success'}
+                  onClick={() => setScenario('success')}
+                >
+                  Successful delivery
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={scenario === 'refund'}
+                  onClick={() => setScenario('refund')}
+                >
+                  Invalid → refund
+                </button>
+              </div>
+              <p className="scenario-preview">
+                {scenario === 'success'
+                  ? 'The buyer purchases valid evidence, recomputes it, and changes its route.'
+                  : 'The evaluator rejects invalid evidence; the buyer is refunded before reveal.'}
+              </p>
+            </fieldset>
+          )}
+
+          {activeRun ? (
             <Button
               size="lg"
               className="run-button"
-              onClick={resumeRun}
+              onClick={interactive ? advanceInteractive : resumeRun}
               disabled={busy}
             >
               {busy ? (
                 <>
                   <RefreshCw className="spin" />
-                  {isSimulation ? 'Simulating' : 'Reconciling'}
+                  {interactive
+                    ? isSimulation
+                      ? 'Applying step'
+                      : 'Reconciling'
+                    : 'Running demo'}
                 </>
               ) : (
                 <>
-                  Resume run <ArrowRight />
+                  {interactive
+                    ? (nextAction[run?.stage ?? ''] ?? 'Advance purchase')
+                    : 'Resume guided demo'}{' '}
+                  <ArrowRight />
                 </>
               )}
             </Button>
@@ -526,17 +659,28 @@ export default function Home() {
               size="lg"
               className="run-button"
               onClick={() =>
-                void executeRun(goal, scenario).catch(() => undefined)
+                void executeRun(
+                  goal,
+                  interactive ? 'market' : scenario,
+                  interactive ? (selectedListingId ?? undefined) : undefined,
+                ).catch(() => undefined)
               }
-              disabled={busy || !catalog}
+              disabled={busy || !catalog || (interactive && !selectedListingId)}
             >
               {busy ? (
                 <>
-                  <RefreshCw className="spin" /> Simulating
+                  <RefreshCw className="spin" />{' '}
+                  {interactive ? 'Starting purchase' : 'Running demo'}
                 </>
               ) : (
                 <>
-                  {terminal ? 'Replay simulation' : 'Run simulation'}{' '}
+                  {interactive
+                    ? terminal
+                      ? 'Buy selected evidence again'
+                      : 'Start selected purchase'
+                    : terminal
+                      ? 'Replay guided demo'
+                      : 'Run guided demo'}{' '}
                   <ArrowRight />
                 </>
               )}
@@ -549,8 +693,8 @@ export default function Home() {
             </strong>
             <span>
               {isSimulation
-                ? 'No wallet or funds needed. Uses the real buyer policy and escrow state machine.'
-                : 'Transactions settle through the configured Base Sepolia contract.'}
+                ? 'No wallet or funds needed. Every manual action is persisted through the real buyer policy and escrow state machine.'
+                : 'A configured constrained buyer signer submits the fixed Base Sepolia contract calls; each action waits for its receipt.'}
             </span>
           </div>
 
@@ -642,7 +786,7 @@ export default function Home() {
           )}
           <div className="listings">
             {displayedListings?.map((listing) => {
-              const selected = run?.selectedListingId === listing.id;
+              const selected = activeSelectedListingId === listing.id;
               const unavailable = listingStates
                 .get(listing.id)
                 ?.startsWith('Not selected');
@@ -695,6 +839,25 @@ export default function Home() {
                       </span>
                       <span className="sealed">Private until delivery</span>
                     </div>
+                    {interactive && !activeRun && !unavailable && (
+                      <Button
+                        className="select-listing"
+                        size="sm"
+                        variant={
+                          selectedListingId === listing.id
+                            ? 'default'
+                            : 'outline'
+                        }
+                        onClick={() => {
+                          setExperience('interactive');
+                          setSelectedListingId(listing.id);
+                        }}
+                      >
+                        {selectedListingId === listing.id
+                          ? 'Selected for purchase'
+                          : 'Select dossier'}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -711,7 +874,10 @@ export default function Home() {
           <output className="run-status">{statusLine}</output>
           <progress
             className="progress-rail"
-            aria-label="Buyer simulation progress"
+            aria-label="Evidence purchase progress"
+            aria-valuetext={
+              run ? `Stage ${currentStep} of 7: ${run.stage}` : 'Not started'
+            }
             max={7}
             value={currentStep}
           />
@@ -819,8 +985,8 @@ export default function Home() {
               <span className="eyebrow">Decision receipt</span>
               <h2>
                 {!terminal
-                  ? 'Buyer simulation in progress'
-                  : run.scenario === 'refund'
+                  ? 'Evidence purchase in progress'
+                  : isRefundOutcome
                     ? 'Evidence failed verification; funds returned'
                     : `The buyer switched to ${run.selectedCandidateId ?? 'the verified model'}`}
               </h2>
@@ -843,11 +1009,7 @@ export default function Home() {
               <p>{run.result?.beforeDecision}</p>
             </div>
             <ArrowRight />
-            <div
-              className={
-                run.scenario === 'refund' ? 'refund-result' : 'after-result'
-              }
-            >
+            <div className={isRefundOutcome ? 'refund-result' : 'after-result'}>
               <span>After verification</span>
               <p>{run.result?.afterDecision}</p>
             </div>

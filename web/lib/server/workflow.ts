@@ -198,28 +198,52 @@ function priorReport() {
   return createEvaluation(DEMO_SEED, 'fast-keyword');
 }
 
-function startingResult(goal: Goal): RunResult {
+function startingResult(
+  goal: Goal,
+  selectionMode: RunResult['selectionMode'] = 'policy',
+): RunResult {
   const route = chooseRoute([priorReport()], goal);
   return {
+    selectionMode,
     beforeDecision: route.reason,
     afterDecision: 'Pending purchased evidence.',
     route,
   };
 }
 
-function validateInput(value: unknown): { goal: Goal; scenario: Scenario } {
-  const body = value as { goal?: unknown; scenario?: unknown };
+function validateInput(value: unknown): {
+  goal: Goal;
+  scenario: Scenario;
+  listingId: string | null;
+} {
+  const body = value as {
+    goal?: unknown;
+    scenario?: unknown;
+    listingId?: unknown;
+  };
   if (!body || !['speed', 'balanced', 'quality'].includes(String(body.goal))) {
     throw new Error('goal must be speed, balanced, or quality');
   }
-  if (!['success', 'refund'].includes(String(body.scenario))) {
-    throw new Error('scenario must be success or refund');
+  if (!['success', 'refund', 'market'].includes(String(body.scenario))) {
+    throw new Error('scenario must be success, refund, or market');
   }
-  return { goal: body.goal as Goal, scenario: body.scenario as Scenario };
+  const listingId =
+    typeof body.listingId === 'string' && body.listingId.length <= 96
+      ? body.listingId
+      : null;
+  if (body.scenario === 'market' && !listingId)
+    throw new Error('listingId is required for an interactive purchase');
+  if (body.scenario !== 'market' && body.listingId !== undefined)
+    throw new Error('listingId is only accepted for an interactive purchase');
+  return {
+    goal: body.goal as Goal,
+    scenario: body.scenario as Scenario,
+    listingId,
+  };
 }
 
 export async function createRun(value: unknown) {
-  const { goal, scenario } = validateInput(value);
+  const { goal, scenario, listingId } = validateInput(value);
   assertPublicRunAccess();
   const listings = await ensureDemoCatalog();
   const chainMode = liveChainEnabled()
@@ -241,10 +265,34 @@ export async function createRun(value: unknown) {
     },
     now(),
   );
-  const chosen =
-    scenario === 'refund'
-      ? (listings.find((listing) => listing.id === FAULT_LISTING_ID) ?? null)
-      : (selection.chosen as ListingRecord | null);
+  let chosen: ListingRecord | null;
+  if (scenario === 'market') {
+    const requested = listings.find((listing) => listing.id === listingId);
+    if (!requested) throw new Error('Selected listing is unavailable');
+    if (requested.sampleCount < 24)
+      throw new Error('Selected listing does not meet the minimum coverage');
+    const manualSelection = selectEvidence(
+      [requested],
+      {
+        goal,
+        budgetWei,
+        maxAgeMs: MAX_EVIDENCE_AGE_MS,
+        purchasedIds: [PRIOR_LISTING_ID],
+      },
+      now(),
+    );
+    if (!manualSelection.chosen) {
+      throw new Error(
+        `Selected listing rejected: ${manualSelection.decisions[0]?.reason ?? 'buyer policy failed'}`,
+      );
+    }
+    chosen = requested;
+  } else {
+    chosen =
+      scenario === 'refund'
+        ? (listings.find((listing) => listing.id === FAULT_LISTING_ID) ?? null)
+        : (selection.chosen as ListingRecord | null);
+  }
   if (!chosen) throw new Error('No eligible evidence listing is available');
   if (chosen.priceWei > budgetWei)
     throw new Error('Selected listing exceeds the enforced spend cap');
@@ -282,14 +330,16 @@ export async function createRun(value: unknown) {
     selectedCandidateId: null,
     decisionReason:
       scenario === 'refund'
-        ? 'Explicit protocol drill selected; private contents remain sealed until evaluator inspection.'
-        : selection.decisions
-            .map((item) => `${item.listingId}: ${item.reason}`)
-            .join(' · '),
+        ? 'Guided refund path selected; private contents remain sealed until evaluator inspection.'
+        : scenario === 'market'
+          ? `Buyer selected ${chosen.id}; server-side policy rechecked ownership, status, freshness, coverage, price, and spend cap.`
+          : selection.decisions
+              .map((item) => `${item.listingId}: ${item.reason}`)
+              .join(' · '),
     contractOrderId: null,
     trace: [],
     txHashes: [],
-    result: startingResult(goal),
+    result: startingResult(goal, scenario === 'market' ? 'manual' : 'policy'),
     error: null,
     createdAt,
     updatedAt: createdAt,
@@ -349,7 +399,7 @@ async function hydratedPublicRun(
   const wasUnlocked = copy.trace.some(
     (entry) => entry.label === 'Evidence unlocked',
   );
-  if (listing && wasUnlocked && copy.scenario === 'success' && copy.result) {
+  if (listing && wasUnlocked && copy.scenario !== 'refund' && copy.result) {
     const artifact = await loadArtifact(listing);
     if (artifact.report) {
       copy.result = {
@@ -482,6 +532,13 @@ function requireEvent(condition: boolean, message: string): void {
   if (!condition) throw new Error(`Receipt validation failed: ${message}`);
 }
 
+function shouldRefund(run: RunRecord, listing: ListingRecord): boolean {
+  return (
+    run.scenario === 'refund' ||
+    (run.scenario === 'market' && listing.fixtureKind === 'invalid')
+  );
+}
+
 async function advanceSimulation(run: RunRecord, listing: ListingRecord) {
   if (run.stage === 'selected') {
     transition(
@@ -493,7 +550,7 @@ async function advanceSimulation(run: RunRecord, listing: ListingRecord) {
     return;
   }
 
-  if (run.scenario === 'refund') {
+  if (shouldRefund(run, listing)) {
     if (run.stage === 'funded') {
       const artifact = await loadArtifact(listing);
       if (artifact.validation.valid)
@@ -501,7 +558,7 @@ async function advanceSimulation(run: RunRecord, listing: ListingRecord) {
           'Fault-injection artifact unexpectedly passed validation',
         );
       run.result = {
-        ...startingResult(run.goal),
+        ...startingResult(run.goal, run.result?.selectionMode),
         validation: artifact.validation,
         refundReason: artifact.validation.errors[0] || 'invalid artifact',
         afterDecision:
@@ -657,7 +714,7 @@ async function advanceLive(
   }
   if (!orderId) throw new Error('Confirmed contract order ID is missing');
 
-  if (run.scenario === 'refund') {
+  if (shouldRefund(run, listing)) {
     if (run.stage === 'funded') {
       const artifact = await loadArtifact(listing);
       if (artifact.validation.valid)
@@ -665,7 +722,7 @@ async function advanceLive(
           'Fault-injection artifact unexpectedly passed validation',
         );
       run.result = {
-        ...startingResult(run.goal),
+        ...startingResult(run.goal, run.result?.selectionMode),
         validation: artifact.validation,
         refundReason: artifact.validation.errors[0] || 'invalid artifact',
         afterDecision:

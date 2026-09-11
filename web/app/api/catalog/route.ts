@@ -1,7 +1,6 @@
 import {
   COMMODITY_TERMS,
   ensureDemoCatalog,
-  FAULT_LISTING_ID,
   PRIOR_LISTING_ID,
   publicSellerPlan,
   toPublicListing,
@@ -17,7 +16,6 @@ export async function GET() {
       {
         listings: listings.map(toPublicListing),
         ownedListingIds: [PRIOR_LISTING_ID],
-        protocolDrillListingId: FAULT_LISTING_ID,
         sellerAgent: publicSellerPlan(listings),
         marketTerms: COMMODITY_TERMS,
         chain: publicChainInfo(),
