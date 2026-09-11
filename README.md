@@ -112,15 +112,25 @@ The checked-in [Base Sepolia deployment manifest](./deployments/base-sepolia.jso
 node scripts/verify-base-sepolia.mjs
 ```
 
-## Status
+## On-chain functionality
 
-| Area | Current status |
-|---|---|
-| Interactive hosted workbench | Live |
-| Buyer policy, private delivery, verification, refunds | Live in explicit simulation |
-| Escrow contract and local signed integration | Complete |
-| Public Base Sepolia contract and receipts | Complete and reproducibly verified from public RPC |
-| Walkthrough video | Ready to record using the [demo script](./docs/DEMO_SCRIPT.md) |
+[`EvalVaultEscrow`](https://sepolia.basescan.org/address/0x8cfeefb05e683b4a6dfd0163af42167c75e5699f) is deployed on Base Sepolia. Every externally callable function that changes contract state has been executed on the public testnet:
+
+| Contract function | On-chain behavior | Base Sepolia proof |
+|---|---|---|
+| `createListing` | Stores the seller, pinned evaluator, artifact commitment, terms hash, exact price, and expiry as an immutable offer | [Listings 1](https://sepolia.basescan.org/tx/0xc8e350937359a9e884b5f19ac0f00588d45481d11b437c6607619d7c2906831d) [and 2](https://sepolia.basescan.org/tx/0xe14a6ff9b2738569596bf99afc3e7de6816dd392fcb55769858cb286cb898193) |
+| `buy` | Escrows the exact native-ETH price, freezes the listing terms into an order, records a unique buyer request ID, and starts the delivery deadline | [Funded order](https://sepolia.basescan.org/tx/0xfe180e018f6120294d00b4234740018500a0f4e768f317a834bd5202e6cd8ff9) |
+| `markDelivered` | Lets only the pinned evaluator record the private-delivery receipt hash and start the review deadline | [Delivery](https://sepolia.basescan.org/tx/0xbad6c7be2a57ce407fac888180b3e802c4ee56f4b3a1f42a09a885fe03e41219) |
+| `accept` | Lets only the buyer accept during review, moves the order to `Released`, and credits the seller | [Acceptance and release](https://sepolia.basescan.org/tx/0x910571a9163c882a22b03a79f2d2172aa0765855a64e5f069d95891b280a547a) |
+| `reject` | Lets only the evaluator reject an invalid funded delivery, moves the order to `Refunded`, and credits the buyer | [Evaluator rejection](https://sepolia.basescan.org/tx/0x24be3434f64a0e2d6f6f23a2b1d37018baf923171cac2149c494be96896efdd2) |
+| `challenge` | Lets only the buyer commit challenge-reason and private-evidence hashes during review and starts the resolution deadline | [Buyer challenge](https://sepolia.basescan.org/tx/0x9370ffbde93243bc6b006b5b7c34621134588272b4eecc9733448502b5959fbb) |
+| `resolve` | Lets only the evaluator resolve a dispute to the seller or buyer before the deadline | [Seller outcome](https://sepolia.basescan.org/tx/0x6a4111c2edcf8d32f0b19ddaff67cf71511ba499d638b3f0dfe8cefe292fb861) · [buyer outcome](https://sepolia.basescan.org/tx/0xc13300e317f199fe9a9e87c0c3f43270ef67c706f6819e849adc47c626beda6a) |
+| `refundUndelivered` | Refunds the buyer after the evaluator misses the delivery deadline | [Delivery-timeout refund](https://sepolia.basescan.org/tx/0x49379d4d968a205878e167d3d4a8ec5212b7e30e5e2b8e4eb60e95961f36a837) |
+| `releaseAfterReview` | Releases an unchallenged delivery to the seller after the review deadline | [Review-timeout release](https://sepolia.basescan.org/tx/0xc5874f9ab0ef2c9bc187ffac4d2b50b47b240937d9d78a34190b2d860e3b2196) |
+| `refundUnresolved` | Applies the buyer-friendly default when a dispute passes its resolution deadline | [Resolution-timeout refund](https://sepolia.basescan.org/tx/0x318ac6851e0be172ccb340153cb7ec2f2d0eb727a606cbd5c001abb974663ebe) |
+| `withdraw` | Uses a reentrancy-guarded pull payment to transfer accumulated seller proceeds or buyer refunds and clear the corresponding credit | [Seller withdrawal](https://sepolia.basescan.org/tx/0x3f8d9e6480016d5ea8b1fa06cc67937f9ea951c1a05f5d74fe2722d045911d73) · [buyer withdrawal](https://sepolia.basescan.org/tx/0xeaaf61b459eabce6c70c448015f7a9a79ba7b2691ffc7fe219c3a9d86614b6ea) |
+
+The read interface exposes the immutable evaluator and deadline configuration, individual listings and orders, used request IDs, account credits, and total escrow liabilities. Contract events provide an auditable record for every listing, funding, delivery, rejection, challenge, resolution, release, refund, and withdrawal. The verification command above confirms all 11 state-changing functions, 31 transactions, two stored listings, seven terminal orders, zero remaining liabilities, and zero unwithdrawn buyer or seller credit directly from Base Sepolia.
 
 ## Further reading
 

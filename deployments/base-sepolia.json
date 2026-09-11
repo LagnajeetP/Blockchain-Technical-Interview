@@ -8,56 +8,317 @@
     "address": "0x8cfeefb05e683b4a6dfd0163af42167c75e5699f",
     "deploymentBlock": 46697541,
     "deploymentTransaction": "0x7ce75b93e9277550f31b194643650525d349ba3cff08b11cda7191dc6c40ae45",
-    "evaluator": "0xe878A893d35f99377dF133176409010F814a6246",
     "deliveryWindowSeconds": 120,
     "reviewWindowSeconds": 120,
     "resolutionWindowSeconds": 300
   },
-  "transactions": [
+  "actors": {
+    "operator": "0xD3313514dC2Ad0FC47dE3D5AD5e6B93a7ff836B8",
+    "evaluator": "0xe878A893d35f99377dF133176409010F814a6246",
+    "buyer": "0xF7E82A6C3d9D4915108884BAE926259b040C9a80"
+  },
+  "requiredFunctions": [
+    "createListing",
+    "buy",
+    "markDelivered",
+    "reject",
+    "refundUndelivered",
+    "accept",
+    "challenge",
+    "releaseAfterReview",
+    "resolve",
+    "refundUnresolved",
+    "withdraw"
+  ],
+  "listings": [
     {
-      "label": "Create successful-evidence listing",
-      "hash": "0xc8e350937359a9e884b5f19ac0f00588d45481d11b437c6607619d7c2906831d",
-      "expectedEvent": "ListingCreated"
+      "id": 1,
+      "artifactCommitment": "0x59e82bc865cb82c8250184174472b8f008a90aeea9d5455c4a65fca24049b75e",
+      "termsHash": "0x5b5222e2aefd1708fb2fdcf6e3221a2864d0c9007667328834817a8c4b78eb32",
+      "priceWei": "1000000000000",
+      "expiresAt": 1789757655,
+      "transaction": {
+        "label": "Create successful-evidence listing",
+        "hash": "0xc8e350937359a9e884b5f19ac0f00588d45481d11b437c6607619d7c2906831d",
+        "function": "createListing",
+        "actor": "operator",
+        "expectedEvents": ["ListingCreated"]
+      }
     },
     {
-      "label": "Create refund-test listing",
-      "hash": "0xe14a6ff9b2738569596bf99afc3e7de6816dd392fcb55769858cb286cb898193",
-      "expectedEvent": "ListingCreated"
+      "id": 2,
+      "artifactCommitment": "0xf9c7f9ebc5bb9d35e4268e11a7fef5bd597cdc790c6c2a427d1375a21e10f9a7",
+      "termsHash": "0x5b5222e2aefd1708fb2fdcf6e3221a2864d0c9007667328834817a8c4b78eb32",
+      "priceWei": "1000000000000",
+      "expiresAt": 1789757655,
+      "transaction": {
+        "label": "Create refund-test listing",
+        "hash": "0xe14a6ff9b2738569596bf99afc3e7de6816dd392fcb55769858cb286cb898193",
+        "function": "createListing",
+        "actor": "operator",
+        "expectedEvents": ["ListingCreated"]
+      }
+    }
+  ],
+  "flows": [
+    {
+      "name": "Buyer accepts valid delivery",
+      "orderId": 1,
+      "finalState": "Released",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0xfe180e018f6120294d00b4234740018500a0f4e768f317a834bd5202e6cd8ff9",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Attest delivery",
+          "hash": "0xbad6c7be2a57ce407fac888180b3e802c4ee56f4b3a1f42a09a885fe03e41219",
+          "function": "markDelivered",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderDelivered"]
+        },
+        {
+          "label": "Accept and release",
+          "hash": "0x910571a9163c882a22b03a79f2d2172aa0765855a64e5f069d95891b280a547a",
+          "function": "accept",
+          "actor": "buyer",
+          "expectedEvents": ["OrderAccepted", "OrderReleased"]
+        },
+        {
+          "label": "Seller withdraws",
+          "hash": "0x3f8d9e6480016d5ea8b1fa06cc67937f9ea951c1a05f5d74fe2722d045911d73",
+          "function": "withdraw",
+          "actor": "operator",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Successful flow: fund escrow",
-      "hash": "0xfe180e018f6120294d00b4234740018500a0f4e768f317a834bd5202e6cd8ff9",
-      "expectedEvent": "OrderFunded"
+      "name": "Evaluator rejects invalid delivery",
+      "orderId": 2,
+      "finalState": "Refunded",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0x99da128a4ab21c525db2539a3f63a52e50fc9fd15dc081578cabe962ba0c36cd",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Reject and refund",
+          "hash": "0x24be3434f64a0e2d6f6f23a2b1d37018baf923171cac2149c494be96896efdd2",
+          "function": "reject",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderRejected", "OrderRefunded"]
+        },
+        {
+          "label": "Buyer withdraws refund",
+          "hash": "0x5be71566255c70023ce58b4d6d1b0f724242b757dc8f96d1b32ea4b42a1e7d97",
+          "function": "withdraw",
+          "actor": "buyer",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Successful flow: attest delivery",
-      "hash": "0xbad6c7be2a57ce407fac888180b3e802c4ee56f4b3a1f42a09a885fe03e41219",
-      "expectedEvent": "OrderDelivered"
+      "name": "Dispute resolved to seller",
+      "orderId": 3,
+      "finalState": "Released",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0x65dcb85379aeeb696679e07373514f303c57359b9f14f1a52a74ecf7c2d8d5ae",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Attest delivery",
+          "hash": "0xe2c28a38ac445ba52a092b0eb8a35c32828b16fb7b2b73c6a72a73c16e7e12c5",
+          "function": "markDelivered",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderDelivered"]
+        },
+        {
+          "label": "Buyer challenges",
+          "hash": "0x9370ffbde93243bc6b006b5b7c34621134588272b4eecc9733448502b5959fbb",
+          "function": "challenge",
+          "actor": "buyer",
+          "expectedEvents": ["OrderChallenged"]
+        },
+        {
+          "label": "Evaluator resolves to seller",
+          "hash": "0x6a4111c2edcf8d32f0b19ddaff67cf71511ba499d638b3f0dfe8cefe292fb861",
+          "function": "resolve",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderResolved", "OrderReleased"]
+        },
+        {
+          "label": "Seller withdraws",
+          "hash": "0xc4630d35bef085816b45d924147a832e5a6b698ad66bc8d9bcb20acb6f0ec1c6",
+          "function": "withdraw",
+          "actor": "operator",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Successful flow: buyer acceptance",
-      "hash": "0x910571a9163c882a22b03a79f2d2172aa0765855a64e5f069d95891b280a547a",
-      "expectedEvent": "OrderAccepted"
+      "name": "Dispute resolved to buyer",
+      "orderId": 4,
+      "finalState": "Refunded",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0x0681fb2969be539efd2c761cc96405877a8e26079c05cb5a334c6e545e2ba51f",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Attest delivery",
+          "hash": "0x60cbad65c27d6e4483a0c9d85fa1faa8f3cf30b4f2f7b1e1ca7803b968efae5d",
+          "function": "markDelivered",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderDelivered"]
+        },
+        {
+          "label": "Buyer challenges",
+          "hash": "0x5c4c93454d1c92143d750d2c05c6991f2ddf4a109101d60da27b448fe59e2ca8",
+          "function": "challenge",
+          "actor": "buyer",
+          "expectedEvents": ["OrderChallenged"]
+        },
+        {
+          "label": "Evaluator resolves to buyer",
+          "hash": "0xc13300e317f199fe9a9e87c0c3f43270ef67c706f6819e849adc47c626beda6a",
+          "function": "resolve",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderResolved", "OrderRefunded"]
+        },
+        {
+          "label": "Buyer withdraws refund",
+          "hash": "0xfd07a1235e55465378f6e722f16f959d9264e04bfaeaf2511a023171317f2630",
+          "function": "withdraw",
+          "actor": "buyer",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Successful flow: seller withdrawal",
-      "hash": "0x3f8d9e6480016d5ea8b1fa06cc67937f9ea951c1a05f5d74fe2722d045911d73",
-      "expectedEvent": "Withdrawal"
+      "name": "Missed delivery deadline",
+      "orderId": 5,
+      "finalState": "Refunded",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0xc33756f25d203ef8ba2d009a271da93533c05ef67221850b96845cc409d5f3b6",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Refund undelivered order",
+          "hash": "0x49379d4d968a205878e167d3d4a8ec5212b7e30e5e2b8e4eb60e95961f36a837",
+          "function": "refundUndelivered",
+          "actor": "operator",
+          "expectedEvents": ["OrderRefunded"]
+        },
+        {
+          "label": "Buyer withdraws refund",
+          "hash": "0x8394ef9c1a7bec5cd6f1994234c2b8b3f8c978c3233ab20323fbed55c6343920",
+          "function": "withdraw",
+          "actor": "buyer",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Refund flow: fund escrow",
-      "hash": "0x99da128a4ab21c525db2539a3f63a52e50fc9fd15dc081578cabe962ba0c36cd",
-      "expectedEvent": "OrderFunded"
+      "name": "Unchallenged review deadline",
+      "orderId": 6,
+      "finalState": "Released",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0xad4412285e5faa56d8939e33a2c2070b48c80bd0c9adca42f03beee7f118a831",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Attest delivery",
+          "hash": "0x20d46f4321ea35f0c875919b8c5ec2103023f1fde0175fe9aa767f045cd17df1",
+          "function": "markDelivered",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderDelivered"]
+        },
+        {
+          "label": "Release after review timeout",
+          "hash": "0xc5874f9ab0ef2c9bc187ffac4d2b50b47b240937d9d78a34190b2d860e3b2196",
+          "function": "releaseAfterReview",
+          "actor": "operator",
+          "expectedEvents": ["OrderReleased"]
+        },
+        {
+          "label": "Seller withdraws",
+          "hash": "0x6f5d7c122e9b0a97d3ed7bb5954647f144b9c84d5ccd64cbcb50ed3624359bdd",
+          "function": "withdraw",
+          "actor": "operator",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     },
     {
-      "label": "Refund flow: evaluator rejection",
-      "hash": "0x24be3434f64a0e2d6f6f23a2b1d37018baf923171cac2149c494be96896efdd2",
-      "expectedEvent": "OrderRefunded"
-    },
-    {
-      "label": "Refund flow: buyer withdrawal",
-      "hash": "0x5be71566255c70023ce58b4d6d1b0f724242b757dc8f96d1b32ea4b42a1e7d97",
-      "expectedEvent": "Withdrawal"
+      "name": "Unresolved dispute deadline",
+      "orderId": 7,
+      "finalState": "Refunded",
+      "transactions": [
+        {
+          "label": "Fund escrow",
+          "hash": "0x123350df15617515904a9dd0a5f1f7cacfe2bd383dc4d9f653fd0aaa3ebf88ab",
+          "function": "buy",
+          "actor": "buyer",
+          "valueWei": "1000000000000",
+          "expectedEvents": ["OrderFunded"]
+        },
+        {
+          "label": "Attest delivery",
+          "hash": "0xabb0bc9510f413ba65a9d9546c80149d5337d89ba18572e1b2015ae0e5541452",
+          "function": "markDelivered",
+          "actor": "evaluator",
+          "expectedEvents": ["OrderDelivered"]
+        },
+        {
+          "label": "Buyer challenges",
+          "hash": "0x419fdb95a602de53017907666bb8c728c97899309f49c6b97cd0eda01a26cfc3",
+          "function": "challenge",
+          "actor": "buyer",
+          "expectedEvents": ["OrderChallenged"]
+        },
+        {
+          "label": "Refund unresolved dispute",
+          "hash": "0x318ac6851e0be172ccb340153cb7ec2f2d0eb727a606cbd5c001abb974663ebe",
+          "function": "refundUnresolved",
+          "actor": "operator",
+          "expectedEvents": ["OrderRefunded"]
+        },
+        {
+          "label": "Buyer withdraws refund",
+          "hash": "0xeaaf61b459eabce6c70c448015f7a9a79ba7b2691ffc7fe219c3a9d86614b6ea",
+          "function": "withdraw",
+          "actor": "buyer",
+          "expectedEvents": ["Withdrawal"]
+        }
+      ]
     }
   ]
 }
