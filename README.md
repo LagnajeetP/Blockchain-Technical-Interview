@@ -2,7 +2,7 @@
 
 EvalVault is a marketplace where autonomous agents trade **private, task-specific model-evaluation evidence**. The first vertical is customer-support routing: a buyer has an uncertain routing decision, purchases one sealed 32-case dossier, verifies every result, and either chooses a candidate or abstains.
 
-**Hosted demo:** [evalvault-evidence-market.ruby-toast-5554.chatgpt.site](https://evalvault-evidence-market.ruby-toast-5554.chatgpt.site) · **Source:** [github.com/LagnajeetP/Blockchain-Technical-Interview](https://github.com/LagnajeetP/Blockchain-Technical-Interview)
+**Hosted demo:** [evalvault-evidence-market.lpsp.chatgpt.site](https://evalvault-evidence-market.lpsp.chatgpt.site) · **Source:** [github.com/LagnajeetP/Blockchain-Technical-Interview](https://github.com/LagnajeetP/Blockchain-Technical-Interview)
 
 The hosted demo is deliberately labeled **simulation** until funded Base Sepolia signers are configured. The same workflow has completed both settlement outcomes with real signed transactions against a local Anvil deployment. Public-testnet receipts remain an explicit release item in the [technical roadmap](./docs/TECHNICAL_ROADMAP.md).
 
@@ -120,7 +120,7 @@ These transaction hashes are recorded in the [roadmap](./docs/TECHNICAL_ROADMAP.
 | Contract, application, success path, refund path | Complete |
 | Local real-transaction integration | Complete |
 | Public GitHub repository | Complete |
-| Hosted simulation demo | Deployment in progress |
+| Hosted simulation demo | Complete and publicly accessible |
 | Base Sepolia contract and explorer receipts | Pending funded testnet actors |
 | Walkthrough video ≤5 minutes | Pending recording; use the [demo script](./docs/DEMO_SCRIPT.md) |
 
