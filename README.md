@@ -109,6 +109,7 @@ Live local or Base Sepolia configuration is described in [`web/.env.example`](./
 - Post-hardening local-chain success: order `3`, four signed transactions, route changed to `contextual-rules`, zero remaining escrow liability.
 - Post-hardening local-chain refund: order `4`, three signed transactions, malformed report rejected, no report exposed, zero remaining escrow liability.
 - Persistence audit: 16/16 transaction intents confirmed, zero signed payloads retained, zero active run locks, and zero stored seed leaks.
+- Public WebMCP: the registered `run_evidence_purchase_demo` tool was discovered and invoked from an in-app client; its quality/success run selected `contextual-rules` and returned zero transaction hashes in explicit simulation mode.
 
 These transaction hashes are recorded in the [roadmap](./docs/TECHNICAL_ROADMAP.md) and are explicitly local Anvil evidence. They are not presented as public Base Sepolia proof.
 
