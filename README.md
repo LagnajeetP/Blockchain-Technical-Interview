@@ -106,6 +106,12 @@ make test
 - Full successful and refund journeys completed with real signed transactions on a local Anvil deployment.
 - Public interactive, guided-success, and guided-refund flows verified on the hosted release with no fabricated transaction hashes and no private catalogue fields.
 
+The checked-in [Base Sepolia deployment manifest](./deployments/base-sepolia.json) records the deployed contract and every listing, purchase, delivery, settlement, rejection, and refund transaction. Verify the chain ID, deployed bytecode, immutable configuration, receipt status, contract destination, and expected event logs directly from Base Sepolia with:
+
+```sh
+node scripts/verify-base-sepolia.mjs
+```
+
 ## Status
 
 | Area | Current status |
@@ -113,7 +119,7 @@ make test
 | Interactive hosted workbench | Live |
 | Buyer policy, private delivery, verification, refunds | Live in explicit simulation |
 | Escrow contract and local signed integration | Complete |
-| Public Base Sepolia contract and receipts | Pending faucet funding |
+| Public Base Sepolia contract and receipts | Complete and reproducibly verified from public RPC |
 | Walkthrough video | Ready to record using the [demo script](./docs/DEMO_SCRIPT.md) |
 
 ## Further reading

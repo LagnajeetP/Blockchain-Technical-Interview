@@ -1,0 +1,63 @@
+{
+  "network": "Base Sepolia",
+  "chainId": 84532,
+  "rpcUrl": "https://sepolia.base.org",
+  "explorerUrl": "https://sepolia.basescan.org",
+  "contract": {
+    "name": "EvalVaultEscrow",
+    "address": "0x8cfeefb05e683b4a6dfd0163af42167c75e5699f",
+    "deploymentBlock": 46697541,
+    "deploymentTransaction": "0x7ce75b93e9277550f31b194643650525d349ba3cff08b11cda7191dc6c40ae45",
+    "evaluator": "0xe878A893d35f99377dF133176409010F814a6246",
+    "deliveryWindowSeconds": 120,
+    "reviewWindowSeconds": 120,
+    "resolutionWindowSeconds": 300
+  },
+  "transactions": [
+    {
+      "label": "Create successful-evidence listing",
+      "hash": "0xc8e350937359a9e884b5f19ac0f00588d45481d11b437c6607619d7c2906831d",
+      "expectedEvent": "ListingCreated"
+    },
+    {
+      "label": "Create refund-test listing",
+      "hash": "0xe14a6ff9b2738569596bf99afc3e7de6816dd392fcb55769858cb286cb898193",
+      "expectedEvent": "ListingCreated"
+    },
+    {
+      "label": "Successful flow: fund escrow",
+      "hash": "0xfe180e018f6120294d00b4234740018500a0f4e768f317a834bd5202e6cd8ff9",
+      "expectedEvent": "OrderFunded"
+    },
+    {
+      "label": "Successful flow: attest delivery",
+      "hash": "0xbad6c7be2a57ce407fac888180b3e802c4ee56f4b3a1f42a09a885fe03e41219",
+      "expectedEvent": "OrderDelivered"
+    },
+    {
+      "label": "Successful flow: buyer acceptance",
+      "hash": "0x910571a9163c882a22b03a79f2d2172aa0765855a64e5f069d95891b280a547a",
+      "expectedEvent": "OrderAccepted"
+    },
+    {
+      "label": "Successful flow: seller withdrawal",
+      "hash": "0x3f8d9e6480016d5ea8b1fa06cc67937f9ea951c1a05f5d74fe2722d045911d73",
+      "expectedEvent": "Withdrawal"
+    },
+    {
+      "label": "Refund flow: fund escrow",
+      "hash": "0x99da128a4ab21c525db2539a3f63a52e50fc9fd15dc081578cabe962ba0c36cd",
+      "expectedEvent": "OrderFunded"
+    },
+    {
+      "label": "Refund flow: evaluator rejection",
+      "hash": "0x24be3434f64a0e2d6f6f23a2b1d37018baf923171cac2149c494be96896efdd2",
+      "expectedEvent": "OrderRefunded"
+    },
+    {
+      "label": "Refund flow: buyer withdrawal",
+      "hash": "0x5be71566255c70023ce58b4d6d1b0f724242b757dc8f96d1b32ea4b42a1e7d97",
+      "expectedEvent": "Withdrawal"
+    }
+  ]
+}

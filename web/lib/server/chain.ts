@@ -173,6 +173,8 @@ async function prepare(
   args: readonly unknown[] = [],
   value?: bigint,
 ): Promise<PreparedTransaction> {
+  // Every live-mode write is first simulated against the configured Base Sepolia
+  // escrow, then signed for that exact chain, contract, method, arguments, and value.
   const { address, account, publicClient, walletClient } = clients(role);
   await publicClient.simulateContract({
     address,
@@ -237,6 +239,9 @@ export function prepareWithdraw(role: 'operator' | 'buyer') {
 export async function broadcastPrepared(
   serializedTransaction: Hex,
 ): Promise<Hash> {
+  // This is the real on-chain boundary: sendRawTransaction submits the persisted,
+  // signed payload to Base Sepolia. Receipt/event validation happens before the
+  // workflow records the corresponding business step as complete.
   const { walletClient } = clients('buyer');
   return walletClient.sendRawTransaction({ serializedTransaction });
 }

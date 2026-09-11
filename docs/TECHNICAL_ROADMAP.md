@@ -2,7 +2,7 @@
 
 Build a working evidence market: seller agents publish private evaluations, a buyer buys useful evidence under a budget, on-chain escrow protects the exchange, and verified evidence changes a routing decision.
 
-Status as of 2026-09-11: the application, interactive buyer workbench, escrow, private-evidence workflow, both local-chain outcomes, and public hosting are implemented. The hosted workbench currently uses explicit simulation; the separate guided WebMCP demo path is also available. Dedicated Base Sepolia actors are prepared and live spending is disabled; funding, public receipts, and the walkthrough video remain open. This file is the milestone record; only rows marked **Complete** are claims of completion.
+Status as of 2026-09-11: the application, interactive buyer workbench, escrow, private-evidence workflow, local-chain outcomes, public Base Sepolia deployment, and public hosting are implemented. The hosted workbench currently uses explicit simulation for a repeatable demonstration; the contract, two listings, successful settlement, and buyer refund are independently confirmed on Base Sepolia. The walkthrough video remains open. This file is the milestone record; only rows marked **Complete** are claims of completion.
 
 ## Product decisions
 

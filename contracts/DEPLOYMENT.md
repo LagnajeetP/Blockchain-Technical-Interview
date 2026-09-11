@@ -4,6 +4,12 @@ These commands target Base Sepolia. They only broadcast when you explicitly run 
 target with `--broadcast`; review the simulation output first. The scripts do not
 generate, print, or persist private keys.
 
+The completed public deployment and transaction set are recorded in
+[`deployments/base-sepolia.json`](../deployments/base-sepolia.json). From the
+repository root, run `node scripts/verify-base-sepolia.mjs` to verify the deployed
+bytecode, immutable evaluator and timing values, transaction destinations, receipt
+statuses, and expected contract events directly against Base Sepolia.
+
 ## Setup
 
 Install Foundry, copy `.env.example` to `.env`, and fill in the RPC URL, deployer
